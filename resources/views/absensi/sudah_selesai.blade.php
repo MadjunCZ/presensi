@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Absensi Selesai</title>
+    <title>Absensi Selesai{{ $kegiatan ? ' - ' . $kegiatan->nama_kegiatan : '' }}</title>
+
+    <!-- Open Graph Meta Tags for Social Media Preview -->
+    @if($kegiatan)
+        <meta property="og:title" content="{{ $kegiatan->nama_kegiatan }}">
+        <meta property="og:description" content="Kegiatan Sudah Selesai - {{ $kegiatan->nama_kegiatan }}">
+        <meta property="og:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ request()->url() }}">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan }}">
+        <meta name="twitter:description" content="Kegiatan Sudah Selesai - {{ $kegiatan->nama_kegiatan }}">
+        <meta name="twitter:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    @endif
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
