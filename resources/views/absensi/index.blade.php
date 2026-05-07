@@ -7,14 +7,14 @@
     <title>Absensi - {{ $kegiatan->nama_kegiatan }}</title>
 
     <!-- Open Graph Meta Tags for Social Media Preview -->
-    <meta property="og:title" content="{{ $kegiatan->nama_kegiatan }}">
-    <meta property="og:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan }}">
+    <meta property="og:title" content="{{ $kegiatan->nama_kegiatan ?? 'Form Absensi' }}">
+    <meta property="og:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
     <meta property="og:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request()->url() }}">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan }}">
-    <meta name="twitter:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan }}">
+    <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan ?? 'Form Absensi' }}">
+    <meta name="twitter:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
     <meta name="twitter:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
     
     <!-- Bootstrap 5 CSS -->
