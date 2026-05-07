@@ -240,7 +240,7 @@
     <div class="header-section">
         <div class="container">
             <div class="d-flex align-items-center">
-                <i class="bi bi-clipboard-check fs-3 me-3"></i>
+                <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="50" class="me-3" style="object-fit: contain;">
                 <div>
                     <h4 class="mb-0">Form Absensi</h4>
                     <div class="subtitle">{{ $kegiatan->nama_kegiatan }}</div>

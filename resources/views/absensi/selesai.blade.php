@@ -193,6 +193,7 @@
 <body>
     <div class="card">
         <div class="card-body text-center">
+            <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
             <div class="status-icon">
                 <i class="bi bi-lock-fill"></i>
             </div>

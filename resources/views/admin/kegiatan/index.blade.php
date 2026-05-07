@@ -241,9 +241,14 @@
             <div class="modal-body text-center">
                 <div id="qrcodeContainer" class="qrcode-container mb-3"></div>
                 <p class="small text-muted mb-3">Scan QR Code untuk absensi</p>
-                <button class="btn btn-primary w-100 copy-qr-url" id="copyQrUrl">
-                    <i class="bi bi-clipboard me-2"></i>Salin Link
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary flex-grow-1 copy-qr-url" id="copyQrUrl">
+                        <i class="bi bi-clipboard me-2"></i>Salin Link
+                    </button>
+                    <button class="btn btn-success" id="downloadQrBtn">
+                        <i class="bi bi-download me-2"></i>Download
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -276,6 +281,18 @@
         
         document.getElementById('copyQrUrl').onclick = function() {
             copyToClipboard(currentQrUrl, 'Link berhasil disalin!');
+        };
+        
+        document.getElementById('downloadQrBtn').onclick = function() {
+            const canvas = document.querySelector('#qrcodeContainer canvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'qrcode-absensi.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
         };
         
         new bootstrap.Modal(document.getElementById('qrcodeModal')).show();

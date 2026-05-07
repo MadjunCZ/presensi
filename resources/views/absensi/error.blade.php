@@ -74,6 +74,7 @@
 <body>
     <div class="card">
         <div class="card-body text-center p-5">
+            <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
             <div class="error-icon">
                 <i class="bi bi-x-lg"></i>
             </div>
