@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Absensi - {{ $kegiatan->nama_kegiatan }}</title>
+
+    <!-- Open Graph Meta Tags for Social Media Preview -->
+    <meta property="og:title" content="{{ $kegiatan->nama_kegiatan }}">
+    <meta property="og:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan }}">
+    <meta property="og:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request()->url() }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan }}">
+    <meta name="twitter:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan }}">
+    <meta name="twitter:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -243,13 +254,24 @@
                 <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="50" class="me-3" style="object-fit: contain;">
                 <div>
                     <h4 class="mb-0">Form Absensi</h4>
-                    <div class="subtitle">{{ $kegiatan->nama_kegiatan }}</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="container">
+        <!-- Live Preview Section -->
+        <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-center text-center">
+                    <div>
+                        <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="80" class="mb-3" style="object-fit: contain; ">
+                        <h3 class="mb-2" style="font-weight: 700;">{{ $kegiatan->nama_kegiatan }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Info Box -->
         <div class="info-box">
             <h6><i class="bi bi-info-circle me-2"></i>Detail Kegiatan</h6>
