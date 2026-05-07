@@ -256,8 +256,15 @@
             <p>
                 <i class="bi bi-calendar me-2"></i>
                 {{ \Carbon\Carbon::parse($kegiatan->tanggal)->format('d/m/Y') }}
+            </p>
+            <p>
+                <i class="bi bi-clock me-2"></i>
+                {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_mulai)->format('H:i') }} - 
+                {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_selesai)->format('H:i') }} WIB
+            </p>
+            <p>
+                
                 @if($kegiatan->lokasi)
-                    <span class="mx-2">•</span>
                     <i class="bi bi-geo-alt me-2"></i>{{ $kegiatan->lokasi }}
                 @endif
             </p>
@@ -402,7 +409,6 @@
                             <option value="MIN 8 Nganjuk">MIN 8 Nganjuk</option>
                             <option value="MIN 9 Nganjuk">MIN 9 Nganjuk</option>
                             <option value="MTsN 1 Nganjuk">MTsN 1 Nganjuk</option>
-                            <option value="MTsN 10 Nganjuk">MTsN 10 Nganjuk</option>
                             <option value="MTsN 2 Nganjuk">MTsN 2 Nganjuk</option>
                             <option value="MTsN 3 Nganjuk">MTsN 3 Nganjuk</option>
                             <option value="MTsN 4 Nganjuk">MTsN 4 Nganjuk</option>
@@ -411,6 +417,7 @@
                             <option value="MTsN 7 Nganjuk">MTsN 7 Nganjuk</option>
                             <option value="MTsN 8 Nganjuk">MTsN 8 Nganjuk</option>
                             <option value="MTsN 9 Nganjuk">MTsN 9 Nganjuk</option>
+                            <option value="MTsN 10 Nganjuk">MTsN 10 Nganjuk</option>
                             <option value="lainnya">Lainnya...</option>
                         </select>
                         @error('satker')

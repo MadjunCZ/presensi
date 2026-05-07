@@ -77,6 +77,41 @@
                         </div>
                     </div>
 
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label for="jam_mulai" class="form-label">
+                                    Jam Mulai <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" 
+                                       class="form-control @error('jam_mulai') is-invalid @enderror" 
+                                       id="jam_mulai" 
+                                       name="jam_mulai" 
+                                       value="{{ old('jam_mulai', $kegiatan->jam_mulai ? substr($kegiatan->jam_mulai, 0, 5) : '') }}"
+                                       required>
+                                @error('jam_mulai')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label for="jam_selesai" class="form-label">
+                                    Jam Selesai <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" 
+                                       class="form-control @error('jam_selesai') is-invalid @enderror" 
+                                       id="jam_selesai" 
+                                       name="jam_selesai" 
+                                       value="{{ old('jam_selesai', $kegiatan->jam_selesai ? substr($kegiatan->jam_selesai, 0, 5) : '') }}"
+                                       required>
+                                @error('jam_selesai')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary flex-grow-1">
                             <i class="bi bi-check-lg me-2"></i>Simpan Perubahan

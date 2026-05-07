@@ -7,6 +7,7 @@ use App\Models\Absensi;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 
 class AbsensiController extends Controller
 {
@@ -19,6 +20,34 @@ class AbsensiController extends Controller
 
         if (!$kegiatan) {
             return view('absensi.invalid');
+        }
+
+        // Check time restrictions
+        $now = now();
+        $tanggal = Carbon::parse($kegiatan->tanggal);
+        $mulai = Carbon::parse($tanggal->toDateString() . ' ' . $kegiatan->jam_mulai);
+        $selesai = Carbon::parse($tanggal->toDateString() . ' ' . $kegiatan->jam_selesai);
+
+        // Check if date is in the future (belum mulai)
+        if ($now->toDateString() < $tanggal->toDateString()) {
+            $selisih = $mulai->diffInMinutes($now);
+            return view('absensi.belum_mulai', compact('kegiatan', 'selisih'));
+        }
+
+        // Check if date is in the past (sudah selesai)
+        if ($now->toDateString() > $tanggal->toDateString()) {
+            return view('absensi.sudah_selesai', compact('kegiatan'));
+        }
+
+        // Check if not started yet (on the correct date)
+        if ($now->lt($mulai)) {
+            $selisih = $mulai->diffInMinutes($now);
+            return view('absensi.belum_mulai', compact('kegiatan', 'selisih'));
+        }
+
+        // Check if already closed
+        if ($now->gt($selesai)) {
+            return view('absensi.selesai', compact('kegiatan'));
         }
 
         return view('absensi.index', compact('kegiatan'));
@@ -55,7 +84,7 @@ class AbsensiController extends Controller
         }
 
         // Create attendance record
-        Absensi::create([
+        $absensi = Absensi::create([
             'kegiatan_id' => $kegiatan->id,
             'nip' => $validated['nip'],
             'nama' => $validated['nama'],
@@ -66,7 +95,9 @@ class AbsensiController extends Controller
         ]);
 
         return redirect()->route('absensi.success')
-            ->with('success', 'Absensi berhasil!');
+            ->with('success', 'Absensi berhasil!')
+            ->with('kegiatan_id', $kegiatan->id)
+            ->with('absensi_id', $absensi->id);
     }
 
     /**

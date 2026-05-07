@@ -55,6 +55,8 @@ class KegiatanController extends Controller
             'nama_kegiatan' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'tanggal' => 'required|date',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'nullable|string|max:255',
         ]);
 
@@ -93,6 +95,8 @@ class KegiatanController extends Controller
             'nama_kegiatan' => 'required|string|max:255',
             'deskripsi' => 'nullable|string',
             'tanggal' => 'required|date',
+            'jam_mulai' => 'required|date_format:H:i',
+            'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'nullable|string|max:255',
         ]);
 

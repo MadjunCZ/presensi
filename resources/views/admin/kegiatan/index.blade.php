@@ -66,6 +66,7 @@
                         <th class="text-center" style="width: 50px;">No</th>
                         <th>Nama Kegiatan</th>
                         <th>Tanggal</th>
+                        <th>Jam</th>
                         <th>Lokasi</th>
                         <th class="text-center">Peserta</th>
                         <th class="text-center">Link Absensi</th>
@@ -83,6 +84,11 @@
                             @endif
                         </td>
                         <td>{{ \Carbon\Carbon::parse($kegiatan->tanggal)->format('d/m/Y') }}</td>
+                        <td>
+                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_mulai)->format('H:i') }} - 
+                                {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_selesai)->format('H:i') }}
+  
+                        </td>
                         <td>{{ $kegiatan->lokasi ?? '-' }}</td>
                         <td class="text-center">
                             <span class="badge bg-success badge-count">
@@ -131,7 +137,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center py-4">
+                        <td colspan="8" class="text-center py-4">
                             <div class="text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                 Belum ada kegiatan
@@ -158,6 +164,10 @@
                 <p class="text-muted small mb-2">
                     <i class="bi bi-calendar me-1"></i>
                     {{ \Carbon\Carbon::parse($kegiatan->tanggal)->format('d/m/Y') }}
+                </p>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-clock me-1"></i>
+                    {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_mulai)->format('H:i') }} - {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_selesai)->format('H:i') }}
                 </p>
                 @if($kegiatan->lokasi)
                     <p class="text-muted small mb-2">

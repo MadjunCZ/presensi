@@ -40,6 +40,18 @@
                     </div>
                     <div class="col-6">
                         <div class="d-flex align-items-center text-muted">
+                            <i class="bi bi-clock me-2"></i>
+                            <div>
+                                <small>Jam</small>
+                                <div class="fw-semibold">{{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_mulai)->format('H:i') }} - {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_selesai)->format('H:i') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center text-muted">
                             <i class="bi bi-geo-alt me-2"></i>
                             <div>
                                 <small>Lokasi</small>

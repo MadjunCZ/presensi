@@ -15,6 +15,8 @@ class Kegiatan extends Model
         'nama_kegiatan',
         'deskripsi',
         'tanggal',
+        'jam_mulai',
+        'jam_selesai',
         'lokasi',
         'token',
     ];

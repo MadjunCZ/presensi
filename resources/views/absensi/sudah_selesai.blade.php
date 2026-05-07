@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Absensi Berhasil</title>
+    <title>Absensi Selesai</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,7 +18,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -38,10 +38,10 @@
             padding: 2.5rem 1.5rem;
         }
         
-        .success-icon {
+        .status-icon {
             width: 100px;
             height: 100px;
-            background: linear-gradient(135deg, #198754, #20c997);
+            background: linear-gradient(135deg, #6c757d, #495057);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -51,7 +51,7 @@
             flex-shrink: 0;
         }
         
-        .success-icon i {
+        .status-icon i {
             font-size: 3rem;
             color: white;
         }
@@ -67,7 +67,7 @@
         
         h3 {
             font-weight: 700;
-            color: #198754;
+            color: #495057;
             font-size: 1.75rem;
             word-break: break-word;
         }
@@ -77,7 +77,7 @@
             border-radius: 12px;
             padding: 0.875rem;
             margin-bottom: 0.75rem;
-            border-left: 4px solid #198754;
+            border-left: 4px solid #6c757d;
         }
         
         .detail-label {
@@ -95,22 +95,6 @@
             font-weight: 600;
             word-break: break-word;
             line-height: 1.4;
-        }
-        
-        .btn-home {
-            background: linear-gradient(135deg, #198754, #20c997);
-            border: none;
-            border-radius: 12px;
-            padding: 14px 30px;
-            font-weight: 600;
-            color: white;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-home:hover {
-            color: white;
-            opacity: 0.9;
-            transform: scale(1.02);
         }
         
         hr {
@@ -132,13 +116,13 @@
                 padding: 1.5rem 1rem;
             }
             
-            .success-icon {
+            .status-icon {
                 width: 80px;
                 height: 80px;
                 margin: 0 auto 1rem;
             }
             
-            .success-icon i {
+            .status-icon i {
                 font-size: 2.2rem;
             }
             
@@ -169,16 +153,6 @@
             .detail-value {
                 font-size: 0.9rem;
             }
-            
-            h6 {
-                font-size: 1rem;
-                margin-bottom: 1rem !important;
-            }
-            
-            .btn-home {
-                padding: 12px 20px;
-                font-size: 0.95rem;
-            }
         }
         
         @media (max-width: 400px) {
@@ -186,13 +160,13 @@
                 padding: 1.25rem 0.75rem;
             }
             
-            .success-icon {
+            .status-icon {
                 width: 70px;
                 height: 70px;
                 margin: 0 auto 0.75rem;
             }
             
-            .success-icon i {
+            .status-icon i {
                 font-size: 1.8rem;
             }
             
@@ -217,89 +191,58 @@
     </style>
 </head>
 <body>
-    @php
-        $kegiatan_id = session('kegiatan_id');
-        $absensi_id = session('absensi_id');
-        $kegiatan = $kegiatan_id ? \App\Models\Kegiatan::find($kegiatan_id) : null;
-        $absensi = $absensi_id ? \App\Models\Absensi::find($absensi_id) : null;
-    @endphp
-
     <div class="card">
         <div class="card-body text-center">
-            <div class="success-icon">
-                <i class="bi bi-check-lg"></i>
+            <div class="status-icon">
+                <i class="bi bi-calendar-check-fill"></i>
             </div>
             
-            <h3 class="mb-3">Absensi Berhasil!</h3>
+            <h3 class="mb-3">Kegiatan Sudah Selesai</h3>
             
             <p class="text-muted mb-4">
-                Terima kasih telah melakukan absensi.<br>
-                Data kehadiran Anda telah tercatat.
+                Maaf, kegiatan ini sudah berlalu<br>
+                dan tidak lagi menerima absensi.
             </p>
             
-            <div class="alert alert-success py-2 px-3 d-inline-block mb-4">
+            <div class="alert alert-secondary py-2 px-3 d-inline-block mb-4">
                 <i class="bi bi-check-circle-fill me-2"></i>
-                <small>Absensi berhasil disimpan</small>
+                <small>Periode absensi telah berakhir</small>
             </div>
 
-            @if($kegiatan || $absensi)
+            @if($kegiatan)
                 <hr class="my-4">
                 
                 <div class="text-start mb-4">
                     <h6 class="text-dark mb-3 fw-bold">
-                        <i class="bi bi-info-circle me-2"></i>Detail Kegiatan
+                        <i class="bi bi-calendar-event me-2"></i>Detail Kegiatan
                     </h6>
 
-                    @if($kegiatan)
-                        <div class="detail-item">
-                            <div class="detail-label">Nama Kegiatan</div>
-                            <div class="detail-value">{{ $kegiatan->nama_kegiatan }}</div>
-                        </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Nama Kegiatan</div>
+                        <div class="detail-value">{{ $kegiatan->nama_kegiatan }}</div>
+                    </div>
 
-                        <div class="detail-item">
-                            <div class="detail-label">Tanggal Kegiatan</div>
-                            <div class="detail-value">
-                                {{ \Carbon\Carbon::parse($kegiatan->tanggal)->translatedFormat('l, d F Y') }}
-                            </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tanggal</div>
+                        <div class="detail-value">
+                            {{ \Carbon\Carbon::parse($kegiatan->tanggal)->translatedFormat('l, d F Y') }}
                         </div>
+                    </div>
 
+                    <div class="detail-item">
+                        <div class="detail-label">Jam Mulai</div>
+                        <div class="detail-value">{{ $kegiatan->jam_mulai }}</div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Jam Selesai</div>
+                        <div class="detail-value">{{ $kegiatan->jam_selesai }}</div>
+                    </div>
+
+                    @if($kegiatan->lokasi)
                         <div class="detail-item">
                             <div class="detail-label">Lokasi</div>
-                            <div class="detail-value">{{ $kegiatan->lokasi ?? '-' }}</div>
-                        </div>
-
-                        <div class="detail-item">
-                            <div class="detail-label">Penyelenggara</div>
-                            <div class="detail-value">{{ $kegiatan->penyelenggara ?? '-' }}</div>
-                        </div>
-                    @endif
-
-                    @if($absensi)
-                        <div class="detail-item">
-                            <div class="detail-label">Waktu Absensi</div>
-                            <div class="detail-value">
-                                {{ $absensi->waktu_absensi->translatedFormat('H:i:s') }}
-                            </div>
-                        </div>
-
-                        <div class="detail-item">
-                            <div class="detail-label">Nama Peserta</div>
-                            <div class="detail-value">{{ $absensi->nama }}</div>
-                        </div>
-
-                        <div class="detail-item">
-                            <div class="detail-label">NIP</div>
-                            <div class="detail-value">{{ $absensi->nip }}</div>
-                        </div>
-
-                        <div class="detail-item">
-                            <div class="detail-label">Jabatan</div>
-                            <div class="detail-value">{{ $absensi->jabatan }}</div>
-                        </div>
-
-                        <div class="detail-item">
-                            <div class="detail-label">Satuan Kerja</div>
-                            <div class="detail-value">{{ $absensi->satker }}</div>
+                            <div class="detail-value">{{ $kegiatan->lokasi }}</div>
                         </div>
                     @endif
                 </div>
@@ -307,19 +250,11 @@
 
             <hr class="my-4">
             
-            <p class="text-muted small mb-4">
-                Anda dapat menutup halaman ini atau<br>
-                membuka tautan absensi lain.
+            <p class="text-muted small">
+                <i class="bi bi-info-circle me-2"></i>
+                Silahkan hubungi administrator jika ada pertanyaan
             </p>
         </div>
     </div>
-
-    <!-- Auto redirect after 5 seconds -->
-    <script>
-        setTimeout(function() {
-            // Optional: auto redirect
-            // window.location.href = '/';
-        }, 5000);
-    </script>
 </body>
 </html>
