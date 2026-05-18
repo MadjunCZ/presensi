@@ -481,13 +481,13 @@
                     </div>
 
                     <div class="guide-panel" id="guide-chrome-android" style="background:#f8f9fa;border-radius:12px;padding:0.75rem 1rem;">
-                        <div class="gps-guide-step"><span class="step-num">1</span><span>Ketuk ikon <b>🔒 gembok</b> di sebelah kiri address bar</span></div>
+                        <div class="gps-guide-step"><span class="step-num">1</span><span>Ketuk ikon <b>🎛️ tune (sliders)</b> di sebelah kiri address bar</span></div>
                         <div class="gps-guide-step"><span class="step-num">2</span><span>Ketuk <b>Permissions</b> atau <b>Izin</b></span></div>
                         <div class="gps-guide-step"><span class="step-num">3</span><span>Ubah <b>Location / Lokasi</b> menjadi <b>Allow / Izinkan</b></span></div>
                         <div class="gps-guide-step"><span class="step-num">4</span><span>Refresh halaman ini</span></div>
                     </div>
                     <div class="guide-panel" id="guide-chrome-desktop" style="display:none;background:#f8f9fa;border-radius:12px;padding:0.75rem 1rem;">
-                        <div class="gps-guide-step"><span class="step-num">1</span><span>Klik ikon <b>🔒 gembok</b> di kiri URL bar</span></div>
+                        <div class="gps-guide-step"><span class="step-num">1</span><span>Klik ikon <b>🎛️ tune (sliders)</b> di kiri URL bar</span></div>
                         <div class="gps-guide-step"><span class="step-num">2</span><span>Klik <b>Site settings</b></span></div>
                         <div class="gps-guide-step"><span class="step-num">3</span><span>Ubah <b>Location</b> ke <b>Allow</b></span></div>
                         <div class="gps-guide-step"><span class="step-num">4</span><span>Refresh halaman ini</span></div>
