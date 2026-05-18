@@ -301,6 +301,33 @@
             height: 2.5rem;
             color: #4caf50;
         }
+        /* GPS Permission Styles */
+        .gps-prompt-icon {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+        }
+        .gps-prompt-icon.ask { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); color: #2e7d32; }
+        .gps-prompt-icon.denied { background: linear-gradient(135deg, #ffebee, #ffcdd2); color: #c62828; }
+        .gps-prompt-icon.warn { background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100; }
+        .gps-guide-step {
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            padding: 0.6rem 0; font-size: 13px;
+        }
+        .gps-guide-step .step-num {
+            min-width: 24px; height: 24px; border-radius: 50%;
+            background: #4caf50; color: #fff; font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .gps-browser-tab { cursor: pointer; }
+        .gps-browser-tab.active { background: #e8f5e9 !important; border-color: #4caf50 !important; }
+        .gps-https-warn {
+            background: linear-gradient(135deg, #fff8e1, #fff3e0);
+            border: 1px solid #ffe082; border-radius: 12px;
+            padding: 1rem; text-align: center; font-size: 13px; color: #e65100;
+        }
     </style>
 </head>
 <body>
@@ -342,7 +369,6 @@
                 {{ \Carbon\Carbon::createFromFormat('H:i:s', $kegiatan->jam_selesai)->format('H:i') }} WIB
             </p>
             <p>
-                
                 @if($kegiatan->lokasi)
                     <i class="bi bi-geo-alt me-2"></i>{{ $kegiatan->lokasi }}
                 @endif
@@ -356,24 +382,51 @@
                 <h6 class="fw-bold mb-3">
                     <i class="bi bi-geo-alt-fill text-success me-2"></i>Verifikasi Lokasi GPS
                 </h6>
-                
-                <!-- GPS Loader -->
-                <div class="gps-loader" id="gpsLoader">
+
+                <!-- HTTPS Warning (hidden by default) -->
+                <div id="gpsHttpsWarn" style="display:none;" class="gps-https-warn mb-3">
+                    <i class="bi bi-shield-exclamation fs-4 d-block mb-1"></i>
+                    <strong>Koneksi Tidak Aman</strong><br>
+                    Fitur GPS hanya berjalan di <b>HTTPS</b> atau <b>localhost</b>.
+                </div>
+
+                <!-- No Support Warning (hidden by default) -->
+                <div id="gpsNoSupport" style="display:none;" class="text-center py-4">
+                    <div class="gps-prompt-icon warn"><i class="bi bi-phone-vibrate"></i></div>
+                    <p class="fw-semibold mb-1">Browser Tidak Didukung</p>
+                    <small class="text-muted">Browser Anda tidak mendukung fitur GPS.<br>Gunakan Chrome, Safari, atau Firefox terbaru.</small>
+                </div>
+
+                <!-- Step 1: Permission Pre-Prompt -->
+                <div id="gpsPrePrompt" style="display:none;" class="text-center py-3">
+                    <div class="gps-prompt-icon ask"><i class="bi bi-geo-alt"></i></div>
+                    <h6 class="fw-bold mb-2">Izin Lokasi Dibutuhkan</h6>
+                    <p class="text-muted mb-3" style="font-size:14px;">
+                        Aplikasi absensi membutuhkan akses lokasi GPS untuk memvalidasi kehadiran Anda di area kegiatan.
+                    </p>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-success" id="btnAllowGps" style="border-radius:12px;min-height:48px;">
+                            <i class="bi bi-geo-alt-fill me-2"></i>Izinkan Lokasi
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-2"><i class="bi bi-shield-check me-1"></i>Lokasi hanya digunakan untuk validasi absensi</small>
+                </div>
+
+                <!-- Step 2: Loading -->
+                <div class="gps-loader" id="gpsLoader" style="display:none;">
                     <div class="spinner-border mb-3" role="status"></div>
                     <p class="text-muted mb-1">Mengambil lokasi Anda...</p>
                     <small class="text-muted">Pastikan GPS aktif dan izinkan akses lokasi</small>
                 </div>
-                
-                <!-- GPS Content (hidden initially) -->
+
+                <!-- Step 3: Map & Status -->
                 <div id="gpsContent" style="display:none;">
                     <div id="mapAbsensi" class="mb-3"></div>
-                    
                     <div class="text-center mb-3">
                         <span class="gps-status-badge loading" id="gpsStatusBadge">
                             <i class="bi bi-hourglass-split"></i> Mendeteksi lokasi...
                         </span>
                     </div>
-                    
                     <div class="gps-info-row">
                         <span class="text-muted"><i class="bi bi-arrows-move me-1"></i>Jarak ke lokasi</span>
                         <strong id="gpsJarak">-</strong>
@@ -386,22 +439,72 @@
                         <span class="text-muted"><i class="bi bi-reception-4 me-1"></i>Akurasi GPS</span>
                         <span id="gpsAccuracy">-</span>
                     </div>
-                    
                     <div class="d-grid mt-3">
                         <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshGps">
                             <i class="bi bi-arrow-clockwise me-1"></i>Refresh Lokasi
                         </button>
                     </div>
                 </div>
-                
-                <!-- GPS Error -->
+
+                <!-- Step 4: Error (timeout/unavailable) -->
                 <div id="gpsError" style="display:none;" class="text-center py-3">
-                    <i class="bi bi-exclamation-triangle-fill text-warning fs-1 d-block mb-2"></i>
-                    <p class="text-danger fw-semibold mb-1" id="gpsErrorMsg">GPS tidak tersedia</p>
-                    <small class="text-muted">Pastikan GPS aktif dan izinkan akses lokasi di browser</small>
-                    <div class="d-grid mt-3">
-                        <button type="button" class="btn btn-sm btn-outline-warning" id="btnRetryGps">
+                    <div class="gps-prompt-icon warn"><i class="bi bi-exclamation-triangle"></i></div>
+                    <p class="fw-semibold mb-1" id="gpsErrorMsg">GPS tidak tersedia</p>
+                    <small class="text-muted" id="gpsErrorDetail">Pastikan GPS aktif dan coba lagi</small>
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-warning" id="btnRetryGps" style="border-radius:12px;">
                             <i class="bi bi-arrow-clockwise me-1"></i>Coba Lagi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Permission Denied -->
+                <div id="gpsDenied" style="display:none;">
+                    <div class="text-center mb-3">
+                        <div class="gps-prompt-icon denied"><i class="bi bi-geo-alt-fill"></i></div>
+                        <h6 class="fw-bold text-danger mb-1">Lokasi Ditolak</h6>
+                        <p class="text-muted mb-0" style="font-size:13px;">Anda menolak akses lokasi. Aktifkan izin lokasi agar dapat melakukan absensi.</p>
+                    </div>
+
+                    <!-- Browser guide tabs -->
+                    <div class="mb-2"><small class="fw-semibold text-muted">Panduan Mengaktifkan Lokasi:</small></div>
+                    <div class="d-flex gap-2 mb-3 flex-wrap">
+                        <button class="btn btn-sm btn-outline-secondary gps-browser-tab active" data-target="guide-chrome-android" style="border-radius:20px;font-size:12px;">
+                            <i class="bi bi-phone me-1"></i>Chrome Android
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary gps-browser-tab" data-target="guide-chrome-desktop" style="border-radius:20px;font-size:12px;">
+                            <i class="bi bi-laptop me-1"></i>Chrome Desktop
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary gps-browser-tab" data-target="guide-safari" style="border-radius:20px;font-size:12px;">
+                            <i class="bi bi-apple me-1"></i>Safari iPhone
+                        </button>
+                    </div>
+
+                    <div class="guide-panel" id="guide-chrome-android" style="background:#f8f9fa;border-radius:12px;padding:0.75rem 1rem;">
+                        <div class="gps-guide-step"><span class="step-num">1</span><span>Ketuk ikon <b>🔒 gembok</b> di sebelah kiri address bar</span></div>
+                        <div class="gps-guide-step"><span class="step-num">2</span><span>Ketuk <b>Permissions</b> atau <b>Izin</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">3</span><span>Ubah <b>Location / Lokasi</b> menjadi <b>Allow / Izinkan</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">4</span><span>Refresh halaman ini</span></div>
+                    </div>
+                    <div class="guide-panel" id="guide-chrome-desktop" style="display:none;background:#f8f9fa;border-radius:12px;padding:0.75rem 1rem;">
+                        <div class="gps-guide-step"><span class="step-num">1</span><span>Klik ikon <b>🔒 gembok</b> di kiri URL bar</span></div>
+                        <div class="gps-guide-step"><span class="step-num">2</span><span>Klik <b>Site settings</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">3</span><span>Ubah <b>Location</b> ke <b>Allow</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">4</span><span>Refresh halaman ini</span></div>
+                    </div>
+                    <div class="guide-panel" id="guide-safari" style="display:none;background:#f8f9fa;border-radius:12px;padding:0.75rem 1rem;">
+                        <div class="gps-guide-step"><span class="step-num">1</span><span>Buka <b>Settings / Pengaturan</b> iPhone</span></div>
+                        <div class="gps-guide-step"><span class="step-num">2</span><span>Scroll ke <b>Safari</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">3</span><span>Ketuk <b>Location / Lokasi</b> → pilih <b>Allow / Izinkan</b></span></div>
+                        <div class="gps-guide-step"><span class="step-num">4</span><span>Kembali ke Safari dan refresh halaman</span></div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="button" class="btn btn-success" id="btnRetryDenied" style="border-radius:12px;min-height:48px;">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Coba Lagi
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="location.reload()" style="border-radius:12px;">
+                            <i class="bi bi-arrow-repeat me-1"></i>Refresh Halaman
                         </button>
                     </div>
                 </div>
@@ -872,29 +975,61 @@
 
         @if($kegiatan->isGpsEnabled())
         // ========================
-        // GPS LOCATION LOGIC
+        // GPS LOCATION LOGIC (Enhanced Permission Handling)
         // ========================
         (function() {
             const kegiatanLat = {{ $kegiatan->latitude }};
             const kegiatanLng = {{ $kegiatan->longitude }};
             const radiusMeter = {{ $kegiatan->radius_meter }};
-            
+
             let map, userMarker, kegiatanMarker, radiusCircle, watchId;
             window.gpsUserDalamRadius = false;
 
+            const els = {
+                prePrompt: document.getElementById('gpsPrePrompt'),
+                loader: document.getElementById('gpsLoader'),
+                content: document.getElementById('gpsContent'),
+                error: document.getElementById('gpsError'),
+                denied: document.getElementById('gpsDenied'),
+                noSupport: document.getElementById('gpsNoSupport'),
+                httpsWarn: document.getElementById('gpsHttpsWarn'),
+                errorMsg: document.getElementById('gpsErrorMsg'),
+                errorDetail: document.getElementById('gpsErrorDetail'),
+                badge: document.getElementById('gpsStatusBadge'),
+                jarak: document.getElementById('gpsJarak'),
+                accuracy: document.getElementById('gpsAccuracy'),
+                submitBtn: document.getElementById('submitBtn')
+            };
+
+            function hideAll() {
+                ['prePrompt','loader','content','error','denied','noSupport'].forEach(k => {
+                    if (els[k]) els[k].style.display = 'none';
+                });
+            }
+
+            function showPanel(name) {
+                hideAll();
+                if (els[name]) els[name].style.display = name === 'content' ? 'block' : (name === 'denied' ? 'block' : '');
+                // For flex/block panels
+                if (els[name]) els[name].style.display = ['prePrompt','loader','error','noSupport'].includes(name) ? 'block' : 'block';
+            }
+
+            // Check HTTPS
+            function isSecureContext() {
+                return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            }
+
+            // Init map
             function initGpsMap() {
+                if (map) return;
                 map = L.map('mapAbsensi').setView([kegiatanLat, kegiatanLng], 16);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap',
-                    maxZoom: 19
+                    attribution: '&copy; OpenStreetMap', maxZoom: 19
                 }).addTo(map);
-
                 kegiatanMarker = L.marker([kegiatanLat, kegiatanLng]).addTo(map)
                     .bindPopup('<b>Lokasi Kegiatan</b><br>{{ $kegiatan->lokasi ?? $kegiatan->nama_kegiatan }}');
-
                 radiusCircle = L.circle([kegiatanLat, kegiatanLng], {
-                    radius: radiusMeter,
-                    color: '#4caf50', fillColor: '#4caf50',
+                    radius: radiusMeter, color: '#4caf50', fillColor: '#4caf50',
                     fillOpacity: 0.12, weight: 2, dashArray: '5, 10'
                 }).addTo(map);
             }
@@ -908,10 +1043,7 @@
             }
 
             function updateUserPosition(lat, lng, accuracy) {
-                document.getElementById('gpsLoader').style.display = 'none';
-                document.getElementById('gpsContent').style.display = 'block';
-                document.getElementById('gpsError').style.display = 'none';
-
+                showPanel('content');
                 document.getElementById('latitudeUser').value = lat.toFixed(8);
                 document.getElementById('longitudeUser').value = lng.toFixed(8);
 
@@ -926,70 +1058,138 @@
                 const dalam = jarak <= radiusMeter;
                 window.gpsUserDalamRadius = dalam;
 
-                document.getElementById('gpsJarak').textContent = Math.round(jarak) + ' meter';
-                document.getElementById('gpsAccuracy').textContent = '±' + Math.round(accuracy) + ' meter';
+                els.jarak.textContent = Math.round(jarak) + ' meter';
+                els.accuracy.textContent = '±' + Math.round(accuracy) + ' meter';
 
-                const badge = document.getElementById('gpsStatusBadge');
-                const submitBtn = document.getElementById('submitBtn');
                 if (dalam) {
-                    badge.className = 'gps-status-badge dalam';
-                    badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Dalam Radius Absensi';
-                    submitBtn.disabled = false;
+                    els.badge.className = 'gps-status-badge dalam';
+                    els.badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Dalam Radius Absensi';
+                    els.submitBtn.disabled = false;
                 } else {
-                    badge.className = 'gps-status-badge luar';
-                    badge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Di Luar Radius (' + Math.round(jarak) + 'm)';
-                    submitBtn.disabled = true;
+                    els.badge.className = 'gps-status-badge luar';
+                    els.badge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Di Luar Radius (' + Math.round(jarak) + 'm)';
+                    els.submitBtn.disabled = true;
                 }
 
                 const bounds = L.latLngBounds([[kegiatanLat, kegiatanLng], [lat, lng]]);
                 map.fitBounds(bounds, {padding: [40, 40], maxZoom: 17});
             }
 
-            function showGpsError(msg) {
-                document.getElementById('gpsLoader').style.display = 'none';
-                document.getElementById('gpsContent').style.display = 'none';
-                document.getElementById('gpsError').style.display = 'block';
-                document.getElementById('gpsErrorMsg').textContent = msg;
-                document.getElementById('submitBtn').disabled = true;
+            function showDenied() {
+                showPanel('denied');
+                els.submitBtn.disabled = true;
             }
 
-            function startGps() {
-                if (!navigator.geolocation) {
-                    showGpsError('Browser tidak mendukung GPS');
-                    return;
-                }
-                document.getElementById('gpsLoader').style.display = 'block';
-                document.getElementById('gpsContent').style.display = 'none';
-                document.getElementById('gpsError').style.display = 'none';
+            function showError(msg, detail) {
+                showPanel('error');
+                els.errorMsg.textContent = msg;
+                if (detail) els.errorDetail.textContent = detail;
+                els.submitBtn.disabled = true;
+            }
 
-                if (!map) initGpsMap();
-
+            function requestLocation() {
+                showPanel('loader');
+                initGpsMap();
                 if (watchId) navigator.geolocation.clearWatch(watchId);
                 watchId = navigator.geolocation.watchPosition(
                     function(pos) {
                         updateUserPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
                     },
                     function(err) {
-                        let msg = 'Gagal mengambil lokasi';
-                        if (err.code === 1) msg = 'Akses lokasi ditolak. Aktifkan GPS.';
-                        else if (err.code === 2) msg = 'Lokasi tidak tersedia.';
-                        else if (err.code === 3) msg = 'Timeout mengambil lokasi.';
-                        showGpsError(msg);
+                        if (err.code === 1) {
+                            showDenied();
+                        } else if (err.code === 2) {
+                            showError('GPS Tidak Tersedia', 'Perangkat tidak dapat menentukan lokasi. Pastikan GPS aktif.');
+                        } else if (err.code === 3) {
+                            showError('Timeout Lokasi', 'Gagal mengambil lokasi dalam waktu yang ditentukan. Coba lagi.');
+                        } else {
+                            showError('Gagal Mengambil Lokasi', 'Terjadi kesalahan. Silakan coba lagi.');
+                        }
                     },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
                 );
+                setTimeout(function() { if(map) map.invalidateSize(); }, 500);
             }
 
-            // Disable submit initially until GPS verified
-            document.getElementById('submitBtn').disabled = true;
+            // Main initialization
+            async function initGps() {
+                els.submitBtn.disabled = true;
 
+                // Check HTTPS
+                if (!isSecureContext()) {
+                    els.httpsWarn.style.display = 'block';
+                }
+
+                // Check geolocation support
+                if (!navigator.geolocation) {
+                    showPanel('noSupport');
+                    return;
+                }
+
+                // Use Permissions API if available
+                if (navigator.permissions && navigator.permissions.query) {
+                    try {
+                        const result = await navigator.permissions.query({ name: 'geolocation' });
+
+                        if (result.state === 'granted') {
+                            // Already granted - go straight to location
+                            requestLocation();
+                        } else if (result.state === 'denied') {
+                            // Denied - show guide
+                            showDenied();
+                        } else {
+                            // prompt - show pre-prompt card
+                            showPanel('prePrompt');
+                        }
+
+                        // Listen for permission changes (user changes in settings)
+                        result.addEventListener('change', function() {
+                            if (result.state === 'granted') {
+                                requestLocation();
+                            } else if (result.state === 'denied') {
+                                showDenied();
+                            }
+                        });
+                    } catch(e) {
+                        // Permissions API failed (e.g. Safari), show pre-prompt
+                        showPanel('prePrompt');
+                    }
+                } else {
+                    // No Permissions API (older browsers), show pre-prompt
+                    showPanel('prePrompt');
+                }
+            }
+
+            // Event listeners
             document.addEventListener('DOMContentLoaded', function() {
-                startGps();
-                setTimeout(function() { if(map) map.invalidateSize(); }, 500);
-            });
+                initGps();
 
-            document.getElementById('btnRefreshGps').addEventListener('click', startGps);
-            document.getElementById('btnRetryGps').addEventListener('click', startGps);
+                // "Izinkan Lokasi" button
+                document.getElementById('btnAllowGps').addEventListener('click', requestLocation);
+
+                // Refresh button
+                document.getElementById('btnRefreshGps').addEventListener('click', requestLocation);
+
+                // Retry from error
+                document.getElementById('btnRetryGps').addEventListener('click', requestLocation);
+
+                // Retry from denied
+                document.getElementById('btnRetryDenied').addEventListener('click', function() {
+                    // Try requesting again - if still denied, browser won't show popup
+                    requestLocation();
+                });
+
+                // Browser guide tabs
+                document.querySelectorAll('.gps-browser-tab').forEach(function(tab) {
+                    tab.addEventListener('click', function() {
+                        document.querySelectorAll('.gps-browser-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.guide-panel').forEach(p => p.style.display = 'none');
+                        this.classList.add('active');
+                        const target = document.getElementById(this.getAttribute('data-target'));
+                        if (target) target.style.display = 'block';
+                    });
+                });
+            });
         })();
         @endif
     </script>
