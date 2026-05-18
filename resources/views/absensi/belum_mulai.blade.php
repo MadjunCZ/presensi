@@ -8,13 +8,13 @@
     <!-- Open Graph Meta Tags for Social Media Preview -->
     <meta property="og:title" content="{{ $kegiatan->nama_kegiatan ?? 'Absensi Belum Dibuka' }}">
     <meta property="og:description" content="Absensi Belum Dibuka - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
-    <meta property="og:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    <meta property="og:image" content="https://portal.kemenagnganjuk.id/logo-kemenag.webp">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request()->url() }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan ?? 'Absensi Belum Dibuka' }}">
     <meta name="twitter:description" content="Absensi Belum Dibuka - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
-    <meta name="twitter:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    <meta name="twitter:image" content="https://portal.kemenagnganjuk.id/logo-kemenag.webp">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -247,7 +247,7 @@
 <body>
     <div class="card">
         <div class="card-body text-center">
-            <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
+            <img src="https://portal.kemenagnganjuk.id/logo-kemenag.webp" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
             <div class="status-icon">
                 <i class="bi bi-hourglass-split"></i>
             </div>

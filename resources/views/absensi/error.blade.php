@@ -74,7 +74,7 @@
 <body>
     <div class="card">
         <div class="card-body text-center p-5">
-            <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
+            <img src="https://portal.kemenagnganjuk.id/logo-kemenag.webp" alt="Logo Kemenag" height="60" class="mb-3" style="object-fit: contain;">
             <div class="error-icon">
                 <i class="bi bi-x-lg"></i>
             </div>
@@ -88,7 +88,7 @@
             
             <div class="alert alert-danger py-2 px-3 d-inline-block">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <small>Token kegiatan tidak ditemukan</small>
+                <small>Kegiatan tidak ditemukan</small>
             </div>
             
             <hr class="my-4">

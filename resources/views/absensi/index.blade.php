@@ -9,13 +9,13 @@
     <!-- Open Graph Meta Tags for Social Media Preview -->
     <meta property="og:title" content="{{ $kegiatan->nama_kegiatan ?? 'Form Absensi' }}">
     <meta property="og:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
-    <meta property="og:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    <meta property="og:image" content="https://portal.kemenagnganjuk.id/logo-kemenag.webp">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request()->url() }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $kegiatan->nama_kegiatan ?? 'Form Absensi' }}">
     <meta name="twitter:description" content="Form Absensi - {{ $kegiatan->nama_kegiatan ?? 'Kegiatan' }}">
-    <meta name="twitter:image" content="https://ppid.kemenagnganjuk.id/logo-kemenag.png">
+    <meta name="twitter:image" content="https://portal.kemenagnganjuk.id/logo-kemenag.webp">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
