@@ -18,12 +18,26 @@ class Kegiatan extends Model
         'jam_mulai',
         'jam_selesai',
         'lokasi',
+        'latitude',
+        'longitude',
+        'radius_meter',
         'token',
     ];
 
     protected $casts = [
         'tanggal' => 'date',
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
+        'radius_meter' => 'integer',
     ];
+
+    /**
+     * Cek apakah kegiatan ini menggunakan validasi GPS radius.
+     */
+    public function isGpsEnabled(): bool
+    {
+        return !is_null($this->latitude) && !is_null($this->longitude);
+    }
 
     // Generate token unik saat membuat kegiatan
     public static function generateToken(): string

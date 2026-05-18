@@ -64,13 +64,22 @@ class AbsensiController extends Controller
             return view('absensi.invalid');
         }
 
-        $validated = $request->validate([
+        // Base validation rules
+        $rules = [
             'nip' => 'required|numeric|digits:18',
             'nama' => 'required|string|max:255',
             'jabatan' => 'required|string|max:255',
             'satker' => 'required|string|max:255',
             'ttd' => 'required|string', // Base64 signature
-        ]);
+        ];
+
+        // Tambahkan validasi GPS jika kegiatan menggunakan GPS
+        if ($kegiatan->isGpsEnabled()) {
+            $rules['latitude_user'] = 'required|numeric|between:-90,90';
+            $rules['longitude_user'] = 'required|numeric|between:-180,180';
+        }
+
+        $validated = $request->validate($rules);
 
         // Check if already registered
         $existing = Absensi::where('kegiatan_id', $kegiatan->id)
@@ -83,8 +92,8 @@ class AbsensiController extends Controller
                 ->withInput();
         }
 
-        // Create attendance record
-        $absensi = Absensi::create([
+        // Prepare attendance data
+        $absensiData = [
             'kegiatan_id' => $kegiatan->id,
             'nip' => $validated['nip'],
             'nama' => $validated['nama'],
@@ -92,12 +101,66 @@ class AbsensiController extends Controller
             'satker' => $validated['satker'],
             'ttd' => $validated['ttd'],
             'waktu_absensi' => now(),
-        ]);
+        ];
+
+        // Validasi GPS di backend jika kegiatan menggunakan GPS
+        if ($kegiatan->isGpsEnabled()) {
+            $latUser = (float) $validated['latitude_user'];
+            $lngUser = (float) $validated['longitude_user'];
+            
+            // Hitung jarak menggunakan rumus Haversine
+            $jarak = $this->hitungJarakHaversine(
+                $kegiatan->latitude, $kegiatan->longitude,
+                $latUser, $lngUser
+            );
+
+            $statusValidasi = $jarak <= $kegiatan->radius_meter ? 'dalam_radius' : 'luar_radius';
+
+            $absensiData['latitude_user'] = $latUser;
+            $absensiData['longitude_user'] = $lngUser;
+            $absensiData['jarak_meter'] = round($jarak, 2);
+            $absensiData['status_validasi_radius'] = $statusValidasi;
+
+            // Blokir jika di luar radius (validasi backend)
+            if ($statusValidasi === 'luar_radius') {
+                return redirect()->back()
+                    ->with('error', 'Anda berada di luar area absensi! Jarak Anda: ' . round($jarak) . ' meter (maksimal ' . $kegiatan->radius_meter . ' meter)')
+                    ->withInput();
+            }
+        }
+
+        // Create attendance record
+        $absensi = Absensi::create($absensiData);
 
         return redirect()->route('absensi.success')
             ->with('success', 'Absensi berhasil!')
             ->with('kegiatan_id', $kegiatan->id)
             ->with('absensi_id', $absensi->id);
+    }
+
+    /**
+     * Hitung jarak antara dua titik koordinat menggunakan rumus Haversine.
+     * 
+     * @param float $lat1 Latitude titik pertama
+     * @param float $lng1 Longitude titik pertama
+     * @param float $lat2 Latitude titik kedua
+     * @param float $lng2 Longitude titik kedua
+     * @return float Jarak dalam meter
+     */
+    private function hitungJarakHaversine(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371000; // Radius bumi dalam meter
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLng / 2) * sin($dLng / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 
     /**

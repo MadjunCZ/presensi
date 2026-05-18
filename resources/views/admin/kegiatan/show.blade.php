@@ -2,6 +2,43 @@
 
 @section('title', 'Detail Kegiatan')
 
+@push('styles')
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #mapShow {
+        height: 300px;
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        z-index: 1;
+    }
+    .gps-info-card {
+        background: linear-gradient(135deg, #e8f5e9, #ffffff);
+        border: 2px solid #c8e6c9;
+        border-radius: 12px;
+    }
+    .gps-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .gps-badge.active {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #a5d6a7;
+    }
+    .gps-badge.inactive {
+        background: #f5f5f5;
+        color: #757575;
+        border: 1px solid #e0e0e0;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="row mb-3">
     <div class="col-12">
@@ -59,6 +96,25 @@
                             </div>
                         </div>
                     </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center text-muted">
+                            <i class="bi bi-broadcast me-2"></i>
+                            <div>
+                                <small>Validasi GPS</small>
+                                <div>
+                                    @if($kegiatan->isGpsEnabled())
+                                        <span class="gps-badge active">
+                                            <i class="bi bi-check-circle-fill"></i> Aktif ({{ $kegiatan->radius_meter }}m)
+                                        </span>
+                                    @else
+                                        <span class="gps-badge inactive">
+                                            <i class="bi bi-x-circle"></i> Tidak Aktif
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 @if($kegiatan->deskripsi)
@@ -70,6 +126,34 @@
                 @endif
             </div>
         </div>
+
+        <!-- GPS Map Card -->
+        @if($kegiatan->isGpsEnabled())
+        <div class="card mb-4 gps-info-card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">
+                    <i class="bi bi-geo-alt-fill text-success me-2"></i>Lokasi GPS & Radius Absensi
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-4">
+                        <small class="text-muted">Latitude</small>
+                        <div class="fw-semibold font-monospace">{{ $kegiatan->latitude }}</div>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Longitude</small>
+                        <div class="fw-semibold font-monospace">{{ $kegiatan->longitude }}</div>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted">Radius</small>
+                        <div class="fw-semibold">{{ $kegiatan->radius_meter }} meter</div>
+                    </div>
+                </div>
+                <div id="mapShow"></div>
+            </div>
+        </div>
+        @endif
 
         <!-- Link Absensi Card -->
         <div class="card mb-4">
@@ -102,7 +186,7 @@
                     <form action="{{ route('admin.kegiatan.regenerate-token', $kegiatan) }}" method="POST" class="d-inline">
                         @csrf
                         <button type="submit" class="btn btn-sm btn-outline-warning" 
-                                onclick="return confirm('Generate token baru? Link lama tidak akan生效.')">
+                                onclick="return confirm('Generate token baru? Link lama tidak akan berlaku.')">
                             <i class="bi bi-arrow-repeat"></i> Regenerate
                         </button>
                     </form>
@@ -186,6 +270,39 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+@if($kegiatan->isGpsEnabled())
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lat = {{ $kegiatan->latitude }};
+    const lng = {{ $kegiatan->longitude }};
+    const radius = {{ $kegiatan->radius_meter }};
+
+    const map = L.map('mapShow').setView([lat, lng], 16);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Marker lokasi kegiatan
+    L.marker([lat, lng]).addTo(map)
+        .bindPopup(`<b>{{ $kegiatan->nama_kegiatan }}</b><br>Radius: ${radius}m`)
+        .openPopup();
+
+    // Circle radius
+    L.circle([lat, lng], {
+        radius: radius,
+        color: '#4caf50',
+        fillColor: '#4caf50',
+        fillOpacity: 0.15,
+        weight: 2,
+        dashArray: '5, 10'
+    }).addTo(map);
+});
+</script>
+@endif
 <script>
     // Copy button handlers
     document.querySelectorAll('.copy-btn').forEach(btn => {

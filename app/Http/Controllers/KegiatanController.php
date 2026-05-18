@@ -58,10 +58,18 @@ class KegiatanController extends Controller
             'jam_mulai' => 'required|date_format:H:i',
             'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'radius_meter' => 'nullable|integer|min:10|max:5000',
         ]);
 
         // Generate unique token
         $validated['token'] = Str::uuid()->toString();
+
+        // Set default radius if lat/lng provided but radius not set
+        if (!empty($validated['latitude']) && !empty($validated['longitude']) && empty($validated['radius_meter'])) {
+            $validated['radius_meter'] = 100;
+        }
 
         Kegiatan::create($validated);
 
@@ -98,7 +106,15 @@ class KegiatanController extends Controller
             'jam_mulai' => 'required|date_format:H:i',
             'jam_selesai' => 'required|date_format:H:i|after:jam_mulai',
             'lokasi' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'radius_meter' => 'nullable|integer|min:10|max:5000',
         ]);
+
+        // Set default radius if lat/lng provided but radius not set
+        if (!empty($validated['latitude']) && !empty($validated['longitude']) && empty($validated['radius_meter'])) {
+            $validated['radius_meter'] = 100;
+        }
 
         $kegiatan->update($validated);
 

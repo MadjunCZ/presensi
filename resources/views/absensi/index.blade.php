@@ -26,6 +26,10 @@
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    @if($kegiatan->isGpsEnabled())
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    @endif
     
     <style>
         :root {
@@ -244,6 +248,59 @@
                 height: 180px;
             }
         }
+        /* GPS Map Styles */
+        #mapAbsensi {
+            height: 300px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            z-index: 1;
+        }
+        .gps-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .gps-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .gps-status-badge.dalam {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            color: #2e7d32;
+        }
+        .gps-status-badge.luar {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            color: #c62828;
+        }
+        .gps-status-badge.loading {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            color: #e65100;
+        }
+        .gps-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            font-size: 14px;
+        }
+        .gps-info-row + .gps-info-row {
+            border-top: 1px solid #f0f0f0;
+        }
+        .gps-loader {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+        .gps-loader .spinner-border {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: #4caf50;
+        }
     </style>
 </head>
 <body>
@@ -292,6 +349,66 @@
             </p>
         </div>
 
+        <!-- GPS Location Card -->
+        @if($kegiatan->isGpsEnabled())
+        <div class="card gps-card mb-4" id="gpsCard">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="bi bi-geo-alt-fill text-success me-2"></i>Verifikasi Lokasi GPS
+                </h6>
+                
+                <!-- GPS Loader -->
+                <div class="gps-loader" id="gpsLoader">
+                    <div class="spinner-border mb-3" role="status"></div>
+                    <p class="text-muted mb-1">Mengambil lokasi Anda...</p>
+                    <small class="text-muted">Pastikan GPS aktif dan izinkan akses lokasi</small>
+                </div>
+                
+                <!-- GPS Content (hidden initially) -->
+                <div id="gpsContent" style="display:none;">
+                    <div id="mapAbsensi" class="mb-3"></div>
+                    
+                    <div class="text-center mb-3">
+                        <span class="gps-status-badge loading" id="gpsStatusBadge">
+                            <i class="bi bi-hourglass-split"></i> Mendeteksi lokasi...
+                        </span>
+                    </div>
+                    
+                    <div class="gps-info-row">
+                        <span class="text-muted"><i class="bi bi-arrows-move me-1"></i>Jarak ke lokasi</span>
+                        <strong id="gpsJarak">-</strong>
+                    </div>
+                    <div class="gps-info-row">
+                        <span class="text-muted"><i class="bi bi-bullseye me-1"></i>Radius absensi</span>
+                        <strong>{{ $kegiatan->radius_meter }} meter</strong>
+                    </div>
+                    <div class="gps-info-row">
+                        <span class="text-muted"><i class="bi bi-reception-4 me-1"></i>Akurasi GPS</span>
+                        <span id="gpsAccuracy">-</span>
+                    </div>
+                    
+                    <div class="d-grid mt-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefreshGps">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Refresh Lokasi
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- GPS Error -->
+                <div id="gpsError" style="display:none;" class="text-center py-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-1 d-block mb-2"></i>
+                    <p class="text-danger fw-semibold mb-1" id="gpsErrorMsg">GPS tidak tersedia</p>
+                    <small class="text-muted">Pastikan GPS aktif dan izinkan akses lokasi di browser</small>
+                    <div class="d-grid mt-3">
+                        <button type="button" class="btn btn-sm btn-outline-warning" id="btnRetryGps">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Coba Lagi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Form Card -->
         <div class="card">
             <div class="card-body p-4">
@@ -300,6 +417,10 @@
                     
                     <!-- Hidden signature field -->
                     <input type="hidden" name="ttd" id="ttdSignature" value="">
+                    @if($kegiatan->isGpsEnabled())
+                    <input type="hidden" name="latitude_user" id="latitudeUser" value="">
+                    <input type="hidden" name="longitude_user" id="longitudeUser" value="">
+                    @endif
                     
                     <!-- NIP -->
                     <div class="mb-3">
@@ -512,6 +633,10 @@
     
     <!-- Signature Pad JS -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    @if($kegiatan->isGpsEnabled())
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    @endif
     
     <script>
         // Toast notification function
@@ -718,6 +843,22 @@
                 canvas.focus();
                 return false;
             }
+
+            @if($kegiatan->isGpsEnabled())
+            // Validate GPS
+            const latVal = document.getElementById('latitudeUser').value;
+            const lngVal = document.getElementById('longitudeUser').value;
+            if (!latVal || !lngVal) {
+                e.preventDefault();
+                showToast('Lokasi GPS belum terdeteksi!', 'danger');
+                return false;
+            }
+            if (typeof window.gpsUserDalamRadius !== 'undefined' && !window.gpsUserDalamRadius) {
+                e.preventDefault();
+                showToast('Anda berada di luar area absensi!', 'danger');
+                return false;
+            }
+            @endif
             
             // Disable submit button
             submitBtn.disabled = true;
@@ -727,6 +868,129 @@
         // Show error from session
         @if(session('error'))
             showToast('{{ session('error') }}', 'danger');
+        @endif
+
+        @if($kegiatan->isGpsEnabled())
+        // ========================
+        // GPS LOCATION LOGIC
+        // ========================
+        (function() {
+            const kegiatanLat = {{ $kegiatan->latitude }};
+            const kegiatanLng = {{ $kegiatan->longitude }};
+            const radiusMeter = {{ $kegiatan->radius_meter }};
+            
+            let map, userMarker, kegiatanMarker, radiusCircle, watchId;
+            window.gpsUserDalamRadius = false;
+
+            function initGpsMap() {
+                map = L.map('mapAbsensi').setView([kegiatanLat, kegiatanLng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(map);
+
+                kegiatanMarker = L.marker([kegiatanLat, kegiatanLng]).addTo(map)
+                    .bindPopup('<b>Lokasi Kegiatan</b><br>{{ $kegiatan->lokasi ?? $kegiatan->nama_kegiatan }}');
+
+                radiusCircle = L.circle([kegiatanLat, kegiatanLng], {
+                    radius: radiusMeter,
+                    color: '#4caf50', fillColor: '#4caf50',
+                    fillOpacity: 0.12, weight: 2, dashArray: '5, 10'
+                }).addTo(map);
+            }
+
+            function haversine(lat1, lng1, lat2, lng2) {
+                const R = 6371000;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLng = (lng2 - lng1) * Math.PI / 180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+                return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+
+            function updateUserPosition(lat, lng, accuracy) {
+                document.getElementById('gpsLoader').style.display = 'none';
+                document.getElementById('gpsContent').style.display = 'block';
+                document.getElementById('gpsError').style.display = 'none';
+
+                document.getElementById('latitudeUser').value = lat.toFixed(8);
+                document.getElementById('longitudeUser').value = lng.toFixed(8);
+
+                const userIcon = L.divIcon({
+                    html: '<div style="width:16px;height:16px;background:#1976d2;border:3px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(25,118,210,0.5);"></div>',
+                    iconSize: [16, 16], iconAnchor: [8, 8], className: ''
+                });
+                if (userMarker) { userMarker.setLatLng([lat, lng]); }
+                else { userMarker = L.marker([lat, lng], {icon: userIcon}).addTo(map).bindPopup('Posisi Anda'); }
+
+                const jarak = haversine(kegiatanLat, kegiatanLng, lat, lng);
+                const dalam = jarak <= radiusMeter;
+                window.gpsUserDalamRadius = dalam;
+
+                document.getElementById('gpsJarak').textContent = Math.round(jarak) + ' meter';
+                document.getElementById('gpsAccuracy').textContent = '±' + Math.round(accuracy) + ' meter';
+
+                const badge = document.getElementById('gpsStatusBadge');
+                const submitBtn = document.getElementById('submitBtn');
+                if (dalam) {
+                    badge.className = 'gps-status-badge dalam';
+                    badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> Dalam Radius Absensi';
+                    submitBtn.disabled = false;
+                } else {
+                    badge.className = 'gps-status-badge luar';
+                    badge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Di Luar Radius (' + Math.round(jarak) + 'm)';
+                    submitBtn.disabled = true;
+                }
+
+                const bounds = L.latLngBounds([[kegiatanLat, kegiatanLng], [lat, lng]]);
+                map.fitBounds(bounds, {padding: [40, 40], maxZoom: 17});
+            }
+
+            function showGpsError(msg) {
+                document.getElementById('gpsLoader').style.display = 'none';
+                document.getElementById('gpsContent').style.display = 'none';
+                document.getElementById('gpsError').style.display = 'block';
+                document.getElementById('gpsErrorMsg').textContent = msg;
+                document.getElementById('submitBtn').disabled = true;
+            }
+
+            function startGps() {
+                if (!navigator.geolocation) {
+                    showGpsError('Browser tidak mendukung GPS');
+                    return;
+                }
+                document.getElementById('gpsLoader').style.display = 'block';
+                document.getElementById('gpsContent').style.display = 'none';
+                document.getElementById('gpsError').style.display = 'none';
+
+                if (!map) initGpsMap();
+
+                if (watchId) navigator.geolocation.clearWatch(watchId);
+                watchId = navigator.geolocation.watchPosition(
+                    function(pos) {
+                        updateUserPosition(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                    },
+                    function(err) {
+                        let msg = 'Gagal mengambil lokasi';
+                        if (err.code === 1) msg = 'Akses lokasi ditolak. Aktifkan GPS.';
+                        else if (err.code === 2) msg = 'Lokasi tidak tersedia.';
+                        else if (err.code === 3) msg = 'Timeout mengambil lokasi.';
+                        showGpsError(msg);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+                );
+            }
+
+            // Disable submit initially until GPS verified
+            document.getElementById('submitBtn').disabled = true;
+
+            document.addEventListener('DOMContentLoaded', function() {
+                startGps();
+                setTimeout(function() { if(map) map.invalidateSize(); }, 500);
+            });
+
+            document.getElementById('btnRefreshGps').addEventListener('click', startGps);
+            document.getElementById('btnRetryGps').addEventListener('click', startGps);
+        })();
         @endif
     </script>
 </body>
