@@ -226,7 +226,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary no-print sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ route('admin.kegiatan.index') }}">
-                <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="40" class="me-2">
+                <img src="https://portal.kemenagnganjuk.id/logo-kemenag.webp" alt="Logo Kemenag" height="40" class="me-2">
                 <span>Absensi Digital</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
