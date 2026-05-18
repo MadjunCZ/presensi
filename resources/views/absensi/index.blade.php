@@ -308,7 +308,7 @@
     <div class="header-section">
         <div class="container">
             <div class="d-flex align-items-center">
-                <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="50" class="me-3" style="object-fit: contain;">
+                <img src="https://portal.kemenagnganjuk.id/logo-kemenag.webp" alt="Logo Kemenag" height="50" class="me-3" style="object-fit: contain;">
                 <div>
                     <h4 class="mb-0">Form Absensi</h4>
                 </div>
@@ -322,7 +322,7 @@
             <div class="card-body p-4">
                 <div class="d-flex align-items-center justify-content-center text-center">
                     <div>
-                        <img src="https://ppid.kemenagnganjuk.id/logo-kemenag.png" alt="Logo Kemenag" height="80" class="mb-3" style="object-fit: contain; ">
+                        <img src="https://portal.kemenagnganjuk.id/logo-kemenag.webp" alt="Logo Kemenag" height="80" class="mb-3" style="object-fit: contain; ">
                         <h3 class="mb-2" style="font-weight: 700;">{{ $kegiatan->nama_kegiatan }}</h3>
                     </div>
                 </div>
