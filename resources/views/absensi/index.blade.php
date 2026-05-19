@@ -372,6 +372,18 @@
         }
         .camera-prompt-icon.denied { background: linear-gradient(135deg, #ffebee, #ffcdd2); color: #c62828; }
         .photo-actions { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem; }
+        /* Camera Location Info */
+        .cam-loc-panel {
+            background: linear-gradient(135deg, #f8fffe, #f0faf5);
+            border: 1px solid #e0f2e9; border-radius: 12px;
+            padding: 0.75rem; margin-top: 0.75rem; font-size: 13px;
+        }
+        .cam-loc-address { font-weight: 600; color: #2e7d32; margin-bottom: 0.25rem; }
+        .cam-loc-coords { color: #666; font-size: 11px; font-family: monospace; }
+        .cam-loc-time { color: #888; font-size: 11px; }
+        #camMiniMap { height: 120px; border-radius: 8px; border: 1px solid #e0e0e0; margin-top: 0.5rem; z-index: 1; }
+        .cam-loc-row { display: flex; align-items: center; gap: 0.5rem; padding: 2px 0; }
+        .cam-loc-row i { color: #4caf50; font-size: 12px; min-width: 16px; }
     </style>
 </head>
 <body>
@@ -770,6 +782,27 @@
                                             </button>
                                         </div>
                                     </div>
+
+                                    <!-- Location Info Panel -->
+                                    <div class="cam-loc-panel" id="camLocPanel">
+                                        <div class="cam-loc-row">
+                                            <i class="bi bi-geo-alt-fill"></i>
+                                            <span class="cam-loc-address" id="camLocAddress">Mendeteksi lokasi...</span>
+                                        </div>
+                                        <div class="cam-loc-row">
+                                            <i class="bi bi-crosshair"></i>
+                                            <span class="cam-loc-coords" id="camLocCoords">-</span>
+                                        </div>
+                                        <div class="cam-loc-row">
+                                            <i class="bi bi-reception-4"></i>
+                                            <span class="cam-loc-coords" id="camLocAccuracy">-</span>
+                                        </div>
+                                        <div class="cam-loc-row">
+                                            <i class="bi bi-clock"></i>
+                                            <span class="cam-loc-time" id="camLocTime">-</span>
+                                        </div>
+                                        <div id="camMiniMap"></div>
+                                    </div>
                                 </div>
 
                                 <!-- Captured Photo Preview -->
@@ -1118,11 +1151,15 @@
         // GPS LOCATION LOGIC (Enhanced Permission Handling)
         // ========================
 
-        // Camera Selfie Logic (loaded before GPS so it's available)
+        // Camera Selfie Logic with Location Info
         (function() {
             let stream = null;
-            let facingMode = 'user'; // front camera default
+            let facingMode = 'user';
             let capturedDataUrl = null;
+            let camMiniMap = null, camMiniMarker = null, camMiniCircle = null;
+            let camAddress = '';
+            let camLat = null, camLng = null, camAcc = null;
+            let geocodeTimeout = null;
             const video = document.getElementById('cameraVideo');
             const fotoInput = document.getElementById('fotoSelfieInput');
 
@@ -1136,7 +1173,11 @@
                 errorMsg: document.getElementById('cameraErrorMsg'),
                 errorDetail: document.getElementById('cameraErrorDetail'),
                 watermark: document.getElementById('cameraWatermark'),
-                countdown: document.getElementById('cameraCountdownOverlay')
+                countdown: document.getElementById('cameraCountdownOverlay'),
+                locAddress: document.getElementById('camLocAddress'),
+                locCoords: document.getElementById('camLocCoords'),
+                locAccuracy: document.getElementById('camLocAccuracy'),
+                locTime: document.getElementById('camLocTime')
             };
 
             function hideCamAll() {
@@ -1148,9 +1189,93 @@
                 hideCamAll();
                 if (camEls[name]) camEls[name].style.display = 'block';
             }
-
             function stopStream() {
                 if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            }
+
+            // Reverse geocoding via Nominatim
+            function reverseGeocode(lat, lng) {
+                if (geocodeTimeout) clearTimeout(geocodeTimeout);
+                geocodeTimeout = setTimeout(() => {
+                    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&zoom=18&addressdetails=1', {
+                        headers: { 'Accept-Language': 'id' }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.address) {
+                            const a = data.address;
+                            const parts = [];
+                            if (a.road) parts.push(a.road);
+                            if (a.house_number) parts[0] = (parts[0]||'') + ' No. ' + a.house_number;
+                            const area = a.village || a.suburb || a.neighbourhood || '';
+                            const kec = a.municipality || a.city_district || a.county || '';
+                            const kota = a.city || a.town || a.regency || '';
+                            const prov = a.state || '';
+                            if (area) parts.push(area);
+                            if (kec && kec !== area) parts.push(kec);
+                            if (kota) parts.push(kota);
+                            if (prov && prov !== kota) parts.push(prov);
+                            camAddress = parts.join(', ') || data.display_name || '';
+                        } else {
+                            camAddress = 'Alamat tidak ditemukan';
+                        }
+                        if (camEls.locAddress) camEls.locAddress.textContent = camAddress;
+                    })
+                    .catch(() => {
+                        camAddress = 'Gagal memuat alamat';
+                        if (camEls.locAddress) camEls.locAddress.textContent = camAddress;
+                    });
+                }, 1500); // debounce
+            }
+
+            // Init mini map
+            function initCamMiniMap(lat, lng) {
+                if (camMiniMap) {
+                    camMiniMap.setView([lat, lng], 17);
+                    return;
+                }
+                const el = document.getElementById('camMiniMap');
+                if (!el) return;
+                camMiniMap = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false }).setView([lat, lng], 17);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(camMiniMap);
+                @if($kegiatan->isGpsEnabled())
+                L.circle([{{ $kegiatan->latitude }}, {{ $kegiatan->longitude }}], {
+                    radius: {{ $kegiatan->radius_meter }}, color: '#4caf50', fillColor: '#4caf50', fillOpacity: 0.1, weight: 1, dashArray: '4,6'
+                }).addTo(camMiniMap);
+                L.marker([{{ $kegiatan->latitude }}, {{ $kegiatan->longitude }}]).addTo(camMiniMap);
+                @endif
+            }
+
+            function updateCamMiniMap(lat, lng, acc) {
+                initCamMiniMap(lat, lng);
+                const userIcon = L.divIcon({
+                    html: '<div style="width:12px;height:12px;background:#1976d2;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(25,118,210,0.5);"></div>',
+                    iconSize: [12,12], iconAnchor: [6,6], className: ''
+                });
+                if (camMiniMarker) camMiniMarker.setLatLng([lat, lng]);
+                else camMiniMarker = L.marker([lat, lng], { icon: userIcon }).addTo(camMiniMap);
+                if (camMiniCircle) camMiniCircle.setLatLng([lat, lng]).setRadius(acc);
+                else camMiniCircle = L.circle([lat, lng], { radius: acc, color: '#1976d2', fillOpacity: 0.08, weight: 1 }).addTo(camMiniMap);
+                camMiniMap.setView([lat, lng], 17);
+                setTimeout(() => { if(camMiniMap) camMiniMap.invalidateSize(); }, 300);
+            }
+
+            // Update location info panel
+            function updateCamLocationInfo() {
+                @if($kegiatan->isGpsEnabled())
+                camLat = parseFloat(document.getElementById('latitudeUser').value) || null;
+                camLng = parseFloat(document.getElementById('longitudeUser').value) || null;
+                const accEl = document.getElementById('gpsAccuracy');
+                camAcc = accEl ? parseFloat(accEl.textContent.replace(/[^\d.]/g,'')) : null;
+                @endif
+                if (camLat && camLng) {
+                    camEls.locCoords.textContent = 'Lat: ' + camLat.toFixed(6) + '  Lng: ' + camLng.toFixed(6);
+                    if (camAcc) camEls.locAccuracy.textContent = 'Akurasi: ±' + Math.round(camAcc) + ' meter';
+                    reverseGeocode(camLat, camLng);
+                    updateCamMiniMap(camLat, camLng, camAcc || 50);
+                }
+                const now = new Date();
+                camEls.locTime.textContent = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) + ' ' + now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' WIB';
             }
 
             function updateWatermark() {
@@ -1158,11 +1283,8 @@
                 const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
                 const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
                 let text = '{{ $kegiatan->nama_kegiatan }}<br>' + dateStr + ' ' + timeStr;
-                @if($kegiatan->isGpsEnabled())
-                const lat = document.getElementById('latitudeUser').value;
-                const lng = document.getElementById('longitudeUser').value;
-                if (lat && lng) text += '<br>' + parseFloat(lat).toFixed(6) + ', ' + parseFloat(lng).toFixed(6);
-                @endif
+                if (camAddress) text += '<br>' + camAddress;
+                if (camLat && camLng) text += '<br>Lat: ' + camLat.toFixed(6) + ' Lng: ' + camLng.toFixed(6);
                 camEls.watermark.innerHTML = text;
             }
 
@@ -1178,9 +1300,10 @@
                     video.srcObject = stream;
                     video.classList.toggle('mirror', facingMode === 'user');
                     showCamPanel('live');
+                    updateCamLocationInfo();
                     updateWatermark();
-                    // Keep watermark time updated
-                    window._camWmInterval = setInterval(updateWatermark, 10000);
+                    window._camWmInterval = setInterval(() => { updateWatermark(); updateCamLocationInfo(); }, 5000);
+                    setTimeout(() => { if(camMiniMap) camMiniMap.invalidateSize(); }, 600);
                 } catch(err) {
                     let msg = 'Kamera tidak tersedia', detail = 'Pastikan izin kamera diaktifkan di browser.';
                     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -1201,12 +1324,10 @@
                 camEls.countdown.style.display = 'flex';
                 camEls.countdown.textContent = count;
                 document.getElementById('btnCapture').disabled = true;
-
                 const interval = setInterval(() => {
                     count--;
-                    if (count > 0) {
-                        camEls.countdown.textContent = count;
-                    } else {
+                    if (count > 0) { camEls.countdown.textContent = count; }
+                    else {
                         clearInterval(interval);
                         camEls.countdown.style.display = 'none';
                         capturePhoto();
@@ -1219,48 +1340,38 @@
                 updateWatermark();
                 const vw = video.videoWidth, vh = video.videoHeight;
                 const c = document.createElement('canvas');
-                // Portrait crop 3:4
                 let sw = vw, sh = Math.round(vw * 4 / 3);
                 if (sh > vh) { sh = vh; sw = Math.round(vh * 3 / 4); }
                 const sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
-
                 c.width = Math.min(sw, 720);
                 c.height = Math.round(c.width * 4 / 3);
                 const ctx = c.getContext('2d');
-
-                // Mirror for front camera
-                if (facingMode === 'user') {
-                    ctx.translate(c.width, 0);
-                    ctx.scale(-1, 1);
-                }
+                if (facingMode === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
                 ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
-
-                // Reset transform for watermark
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-                // Draw watermark
+                // Build watermark lines
                 const now = new Date();
-                const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
-                const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-                let wmLines = ['{{ $kegiatan->nama_kegiatan }}', dateStr + ' ' + timeStr];
-                @if($kegiatan->isGpsEnabled())
-                const lat = document.getElementById('latitudeUser').value;
-                const lng = document.getElementById('longitudeUser').value;
-                if (lat && lng) wmLines.push(parseFloat(lat).toFixed(6) + ', ' + parseFloat(lng).toFixed(6));
-                @endif
+                const dateStr = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+                const timeStr = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                let wmLines = ['{{ $kegiatan->nama_kegiatan }}'];
+                if (camAddress) wmLines.push(camAddress);
+                wmLines.push(dateStr + ' ' + timeStr + ' WIB');
+                if (camLat && camLng) wmLines.push('Lat: ' + camLat.toFixed(6) + '  Lng: ' + camLng.toFixed(6));
 
-                const fontSize = Math.round(c.width * 0.028);
+                const fontSize = Math.max(Math.round(c.width * 0.026), 12);
+                const lineH = fontSize + 5;
+                const blockH = wmLines.length * lineH + 16;
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, c.height - blockH, c.width, blockH);
                 ctx.font = '600 ' + fontSize + 'px Inter, sans-serif';
-                ctx.fillStyle = 'rgba(0,0,0,0.45)';
-                ctx.fillRect(0, c.height - (wmLines.length * (fontSize + 6)) - 16, c.width, (wmLines.length * (fontSize + 6)) + 16);
                 ctx.fillStyle = '#fff';
-                ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4;
+                ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 3;
                 wmLines.forEach((line, i) => {
-                    ctx.fillText(line, 12, c.height - ((wmLines.length - i - 1) * (fontSize + 6)) - 12);
+                    ctx.fillText(line, 10, c.height - blockH + lineH * (i + 1));
                 });
                 ctx.shadowBlur = 0;
 
-                // Compress to JPEG
                 capturedDataUrl = c.toDataURL('image/jpeg', 0.75);
                 document.getElementById('capturedPhoto').src = capturedDataUrl;
                 showCamPanel('preview');
@@ -1273,14 +1384,12 @@
                 document.getElementById('confirmedPhoto').src = capturedDataUrl;
                 showCamPanel('confirmed');
             }
-
             function retakePhoto() {
                 capturedDataUrl = null;
                 fotoInput.value = '';
                 openCamera();
             }
 
-            // Event listeners
             document.getElementById('btnStartCamera').addEventListener('click', openCamera);
             document.getElementById('btnCapture').addEventListener('click', doCountdownAndCapture);
             document.getElementById('btnSwitchCamera').addEventListener('click', function() {
@@ -1507,15 +1616,18 @@
             });
         })();
         @endif
-
         // ========================
-        // CAMERA SELFIE LOGIC
+        // CAMERA SELFIE LOGIC (non-GPS kegiatan)
         // ========================
         @if(!$kegiatan->isGpsEnabled())
         (function() {
             let stream = null;
             let facingMode = 'user';
             let capturedDataUrl = null;
+            let camMiniMap = null, camMiniMarker = null;
+            let camAddress = '';
+            let camLat = null, camLng = null, camAcc = null;
+            let geocodeTimeout = null, camWatchId = null;
             const video = document.getElementById('cameraVideo');
             const fotoInput = document.getElementById('fotoSelfieInput');
 
@@ -1529,7 +1641,11 @@
                 errorMsg: document.getElementById('cameraErrorMsg'),
                 errorDetail: document.getElementById('cameraErrorDetail'),
                 watermark: document.getElementById('cameraWatermark'),
-                countdown: document.getElementById('cameraCountdownOverlay')
+                countdown: document.getElementById('cameraCountdownOverlay'),
+                locAddress: document.getElementById('camLocAddress'),
+                locCoords: document.getElementById('camLocCoords'),
+                locAccuracy: document.getElementById('camLocAccuracy'),
+                locTime: document.getElementById('camLocTime')
             };
 
             function hideCamAll() {
@@ -1537,101 +1653,129 @@
                     if (camEls[k]) camEls[k].style.display = 'none';
                 });
             }
-            function showCamPanel(name) {
-                hideCamAll();
-                if (camEls[name]) camEls[name].style.display = 'block';
+            function showCamPanel(name) { hideCamAll(); if (camEls[name]) camEls[name].style.display = 'block'; }
+            function stopStream() { if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+
+            function reverseGeocode(lat, lng) {
+                if (geocodeTimeout) clearTimeout(geocodeTimeout);
+                geocodeTimeout = setTimeout(() => {
+                    fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat='+lat+'&lon='+lng+'&zoom=18&addressdetails=1', {
+                        headers: { 'Accept-Language': 'id' }
+                    }).then(r => r.json()).then(data => {
+                        if (data && data.address) {
+                            const a = data.address, parts = [];
+                            if (a.road) parts.push(a.road + (a.house_number ? ' No. '+a.house_number : ''));
+                            const area = a.village||a.suburb||a.neighbourhood||'';
+                            const kota = a.city||a.town||a.regency||'';
+                            if (area) parts.push(area);
+                            if (kota) parts.push(kota);
+                            if (a.state && a.state !== kota) parts.push(a.state);
+                            camAddress = parts.join(', ') || data.display_name || '';
+                        } else { camAddress = ''; }
+                        if (camEls.locAddress) camEls.locAddress.textContent = camAddress || 'Alamat tidak ditemukan';
+                    }).catch(() => { camAddress = 'Gagal memuat alamat'; if (camEls.locAddress) camEls.locAddress.textContent = camAddress; });
+                }, 1500);
             }
-            function stopStream() {
-                if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+            function initCamMiniMap(lat, lng) {
+                if (camMiniMap) { camMiniMap.setView([lat, lng], 17); return; }
+                const el = document.getElementById('camMiniMap'); if (!el) return;
+                camMiniMap = L.map(el, { zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false }).setView([lat,lng],17);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(camMiniMap);
+            }
+
+            function startCamGeo() {
+                if (!navigator.geolocation) return;
+                camWatchId = navigator.geolocation.watchPosition(pos => {
+                    camLat = pos.coords.latitude; camLng = pos.coords.longitude; camAcc = pos.coords.accuracy;
+                    camEls.locCoords.textContent = 'Lat: '+camLat.toFixed(6)+'  Lng: '+camLng.toFixed(6);
+                    camEls.locAccuracy.textContent = 'Akurasi: ±'+Math.round(camAcc)+' meter';
+                    reverseGeocode(camLat, camLng);
+                    initCamMiniMap(camLat, camLng);
+                    const userIcon = L.divIcon({ html:'<div style="width:12px;height:12px;background:#1976d2;border:2px solid #fff;border-radius:50%;box-shadow:0 0 6px rgba(25,118,210,0.5);"></div>', iconSize:[12,12], iconAnchor:[6,6], className:'' });
+                    if (camMiniMarker) camMiniMarker.setLatLng([camLat,camLng]);
+                    else camMiniMarker = L.marker([camLat,camLng],{icon:userIcon}).addTo(camMiniMap);
+                    camMiniMap.setView([camLat,camLng],17);
+                    setTimeout(() => { if(camMiniMap) camMiniMap.invalidateSize(); }, 300);
+                }, () => {}, { enableHighAccuracy:true, timeout:10000, maximumAge:5000 });
+            }
+
+            function updateCamTime() {
+                const now = new Date();
+                camEls.locTime.textContent = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})+' '+now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' WIB';
             }
 
             function updateWatermark() {
                 const now = new Date();
-                const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
-                const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
-                camEls.watermark.innerHTML = '{{ $kegiatan->nama_kegiatan }}<br>' + dateStr + ' ' + timeStr;
+                let text = '{{ $kegiatan->nama_kegiatan }}<br>'+now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})+' '+now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+                if (camAddress) text += '<br>'+camAddress;
+                if (camLat&&camLng) text += '<br>Lat: '+camLat.toFixed(6)+' Lng: '+camLng.toFixed(6);
+                camEls.watermark.innerHTML = text;
             }
 
             async function openCamera() {
-                showCamPanel('loading');
-                stopStream();
+                showCamPanel('loading'); stopStream();
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: facingMode, width: {ideal: 720}, height: {ideal: 960} }, audio: false
-                    });
+                    stream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:facingMode,width:{ideal:720},height:{ideal:960}}, audio:false });
                     video.srcObject = stream;
-                    video.classList.toggle('mirror', facingMode === 'user');
+                    video.classList.toggle('mirror', facingMode==='user');
                     showCamPanel('live');
-                    updateWatermark();
-                    window._camWmInterval = setInterval(updateWatermark, 10000);
+                    startCamGeo(); updateCamTime(); updateWatermark();
+                    window._camWmInterval = setInterval(() => { updateWatermark(); updateCamTime(); }, 5000);
+                    setTimeout(() => { if(camMiniMap) camMiniMap.invalidateSize(); }, 600);
                 } catch(err) {
-                    let msg = 'Kamera tidak tersedia', detail = 'Pastikan izin kamera diaktifkan.';
-                    if (err.name === 'NotAllowedError') { msg = 'Izin Kamera Ditolak'; detail = 'Aktifkan izin kamera di pengaturan browser.'; }
-                    else if (err.name === 'NotFoundError') { msg = 'Kamera Tidak Ditemukan'; detail = 'Perangkat ini tidak memiliki kamera.'; }
-                    camEls.errorMsg.textContent = msg;
-                    camEls.errorDetail.textContent = detail;
-                    showCamPanel('error');
+                    let msg='Kamera tidak tersedia', detail='Pastikan izin kamera diaktifkan.';
+                    if (err.name==='NotAllowedError') { msg='Izin Kamera Ditolak'; detail='Aktifkan izin kamera di pengaturan browser.'; }
+                    else if (err.name==='NotFoundError') { msg='Kamera Tidak Ditemukan'; detail='Perangkat ini tidak memiliki kamera.'; }
+                    camEls.errorMsg.textContent=msg; camEls.errorDetail.textContent=detail; showCamPanel('error');
                 }
             }
 
             function doCountdownAndCapture() {
-                let count = 3;
-                camEls.countdown.style.display = 'flex';
-                camEls.countdown.textContent = count;
-                document.getElementById('btnCapture').disabled = true;
-                const interval = setInterval(() => {
+                let count=3; camEls.countdown.style.display='flex'; camEls.countdown.textContent=count;
+                document.getElementById('btnCapture').disabled=true;
+                const interval=setInterval(() => {
                     count--;
-                    if (count > 0) { camEls.countdown.textContent = count; }
-                    else {
-                        clearInterval(interval);
-                        camEls.countdown.style.display = 'none';
-                        capturePhoto();
-                        document.getElementById('btnCapture').disabled = false;
-                    }
+                    if (count>0) camEls.countdown.textContent=count;
+                    else { clearInterval(interval); camEls.countdown.style.display='none'; capturePhoto(); document.getElementById('btnCapture').disabled=false; }
                 }, 800);
             }
 
             function capturePhoto() {
-                const vw = video.videoWidth, vh = video.videoHeight;
-                const c = document.createElement('canvas');
-                let sw = vw, sh = Math.round(vw * 4 / 3);
-                if (sh > vh) { sh = vh; sw = Math.round(vh * 3 / 4); }
-                const sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
-                c.width = Math.min(sw, 720);
-                c.height = Math.round(c.width * 4 / 3);
-                const ctx = c.getContext('2d');
-                if (facingMode === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+                const vw=video.videoWidth, vh=video.videoHeight, c=document.createElement('canvas');
+                let sw=vw, sh=Math.round(vw*4/3);
+                if (sh>vh) { sh=vh; sw=Math.round(vh*3/4); }
+                const sx=Math.round((vw-sw)/2), sy=Math.round((vh-sh)/2);
+                c.width=Math.min(sw,720); c.height=Math.round(c.width*4/3);
+                const ctx=c.getContext('2d');
+                if (facingMode==='user') { ctx.translate(c.width,0); ctx.scale(-1,1); }
                 ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.setTransform(1,0,0,1,0,0);
 
-                const now = new Date();
-                const wmLines = ['{{ $kegiatan->nama_kegiatan }}',
-                    now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) + ' ' +
-                    now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})];
-                const fontSize = Math.round(c.width * 0.028);
-                ctx.font = '600 ' + fontSize + 'px Inter, sans-serif';
-                ctx.fillStyle = 'rgba(0,0,0,0.45)';
-                ctx.fillRect(0, c.height - (wmLines.length*(fontSize+6))-16, c.width, (wmLines.length*(fontSize+6))+16);
-                ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4;
-                wmLines.forEach((line,i) => { ctx.fillText(line, 12, c.height - ((wmLines.length-i-1)*(fontSize+6))-12); });
+                const now=new Date();
+                let wmLines=['{{ $kegiatan->nama_kegiatan }}'];
+                if (camAddress) wmLines.push(camAddress);
+                wmLines.push(now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'})+' '+now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' WIB');
+                if (camLat&&camLng) wmLines.push('Lat: '+camLat.toFixed(6)+'  Lng: '+camLng.toFixed(6));
 
-                capturedDataUrl = c.toDataURL('image/jpeg', 0.75);
-                document.getElementById('capturedPhoto').src = capturedDataUrl;
-                showCamPanel('preview');
-                stopStream();
+                const fontSize=Math.max(Math.round(c.width*0.026),12), lineH=fontSize+5, blockH=wmLines.length*lineH+16;
+                ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(0,c.height-blockH,c.width,blockH);
+                ctx.font='600 '+fontSize+'px Inter, sans-serif'; ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=3;
+                wmLines.forEach((line,i) => { ctx.fillText(line, 10, c.height-blockH+lineH*(i+1)); });
+
+                capturedDataUrl=c.toDataURL('image/jpeg',0.75);
+                document.getElementById('capturedPhoto').src=capturedDataUrl;
+                showCamPanel('preview'); stopStream();
                 if (window._camWmInterval) clearInterval(window._camWmInterval);
+                if (camWatchId) { navigator.geolocation.clearWatch(camWatchId); camWatchId=null; }
             }
 
             document.getElementById('btnStartCamera').addEventListener('click', openCamera);
             document.getElementById('btnCapture').addEventListener('click', doCountdownAndCapture);
-            document.getElementById('btnSwitchCamera').addEventListener('click', function() {
-                facingMode = facingMode === 'user' ? 'environment' : 'user'; openCamera();
-            });
+            document.getElementById('btnSwitchCamera').addEventListener('click', function() { facingMode=facingMode==='user'?'environment':'user'; openCamera(); });
             document.getElementById('btnRetake').addEventListener('click', function() { capturedDataUrl=null; fotoInput.value=''; openCamera(); });
             document.getElementById('btnUsePhoto').addEventListener('click', function() {
-                fotoInput.value = capturedDataUrl;
-                document.getElementById('confirmedPhoto').src = capturedDataUrl;
-                showCamPanel('confirmed');
+                fotoInput.value=capturedDataUrl; document.getElementById('confirmedPhoto').src=capturedDataUrl; showCamPanel('confirmed');
             });
             document.getElementById('btnRetakeConfirmed').addEventListener('click', function() { capturedDataUrl=null; fotoInput.value=''; openCamera(); });
             document.getElementById('btnRetryCamera').addEventListener('click', openCamera);
@@ -1640,3 +1784,4 @@
     </script>
 </body>
 </html>
+
