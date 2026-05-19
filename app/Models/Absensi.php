@@ -17,6 +17,7 @@ class Absensi extends Model
         'jabatan',
         'satker',
         'ttd',
+        'foto_selfie',
         'latitude_user',
         'longitude_user',
         'jarak_meter',

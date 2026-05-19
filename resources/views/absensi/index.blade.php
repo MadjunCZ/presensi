@@ -328,6 +328,50 @@
             border: 1px solid #ffe082; border-radius: 12px;
             padding: 1rem; text-align: center; font-size: 13px; color: #e65100;
         }
+        /* Camera Selfie Styles */
+        .camera-card { border: none; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .camera-viewport {
+            position: relative; width: 100%; aspect-ratio: 3/4; background: #111;
+            border-radius: 12px; overflow: hidden;
+        }
+        .camera-viewport video, .camera-viewport img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .camera-viewport video.mirror { transform: scaleX(-1); }
+        .camera-overlay {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 1rem; display: flex; justify-content: center; align-items: center; gap: 1rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+        }
+        .camera-btn {
+            width: 60px; height: 60px; border-radius: 50%; border: 3px solid #fff;
+            background: rgba(255,255,255,0.2); color: #fff; font-size: 1.4rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px);
+        }
+        .camera-btn:hover { background: rgba(255,255,255,0.35); }
+        .camera-btn.capture { width: 68px; height: 68px; background: #4caf50; border-color: #fff; }
+        .camera-btn.capture:hover { background: #388e3c; }
+        .camera-btn-sm { width: 44px; height: 44px; font-size: 1.1rem; }
+        .camera-countdown {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 5rem; font-weight: 800; color: #fff;
+            background: rgba(0,0,0,0.5); z-index: 5;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .camera-watermark {
+            position: absolute; bottom: 60px; left: 12px; right: 12px;
+            color: #fff; font-size: 10px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+            pointer-events: none; line-height: 1.5;
+        }
+        .camera-prompt-icon {
+            width: 70px; height: 70px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.75rem; font-size: 1.8rem;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb); color: #1565c0;
+        }
+        .camera-prompt-icon.denied { background: linear-gradient(135deg, #ffebee, #ffcdd2); color: #c62828; }
+        .photo-actions { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem; }
     </style>
 </head>
 <body>
@@ -518,8 +562,9 @@
                 <form action="{{ route('absensi.store', $kegiatan->token) }}" method="POST" id="absensiForm">
                     @csrf
                     
-                    <!-- Hidden signature field -->
+                    <!-- Hidden fields -->
                     <input type="hidden" name="ttd" id="ttdSignature" value="">
+                    <input type="hidden" name="foto_selfie" id="fotoSelfieInput" value="">
                     @if($kegiatan->isGpsEnabled())
                     <input type="hidden" name="latitude_user" id="latitudeUser" value="">
                     <input type="hidden" name="longitude_user" id="longitudeUser" value="">
@@ -682,6 +727,94 @@
                                name="satkerCustom" 
                                placeholder="Satuan Kerja Lainnya"
                                value="{{ old('satkerCustom') }}">
+                    </div>
+
+                    <!-- Camera Selfie Section -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-camera-fill text-primary me-1"></i>
+                            Foto Selfie <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="card camera-card">
+                            <div class="card-body p-3">
+                                <!-- Camera Pre-Prompt -->
+                                <div id="cameraPrePrompt" class="text-center py-3">
+                                    <div class="camera-prompt-icon"><i class="bi bi-camera"></i></div>
+                                    <h6 class="fw-bold mb-1">Ambil Foto Selfie</h6>
+                                    <p class="text-muted mb-3" style="font-size:13px;">Foto wajib diambil langsung dari kamera sebagai bukti kehadiran</p>
+                                    <button type="button" class="btn btn-primary" id="btnStartCamera" style="border-radius:12px;min-height:44px;">
+                                        <i class="bi bi-camera-video me-2"></i>Buka Kamera
+                                    </button>
+                                    <small class="text-muted d-block mt-2"><i class="bi bi-shield-check me-1"></i>Foto tidak dapat diupload dari galeri</small>
+                                </div>
+
+                                <!-- Camera Loading -->
+                                <div id="cameraLoading" style="display:none;" class="text-center py-4">
+                                    <div class="spinner-border text-primary mb-2" style="width:2rem;height:2rem;"></div>
+                                    <p class="text-muted mb-0" style="font-size:13px;">Membuka kamera...</p>
+                                </div>
+
+                                <!-- Camera Live View -->
+                                <div id="cameraLive" style="display:none;">
+                                    <div class="camera-viewport" id="cameraViewport">
+                                        <video id="cameraVideo" autoplay playsinline muted class="mirror"></video>
+                                        <div class="camera-watermark" id="cameraWatermark"></div>
+                                        <div id="cameraCountdownOverlay" class="camera-countdown" style="display:none;"></div>
+                                        <div class="camera-overlay">
+                                            <button type="button" class="camera-btn camera-btn-sm" id="btnSwitchCamera" title="Ganti Kamera">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                            <button type="button" class="camera-btn capture" id="btnCapture" title="Ambil Foto">
+                                                <i class="bi bi-camera-fill"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Captured Photo Preview -->
+                                <div id="cameraPreview" style="display:none;">
+                                    <div class="camera-viewport">
+                                        <img id="capturedPhoto" alt="Foto Selfie">
+                                    </div>
+                                    <div class="photo-actions">
+                                        <button type="button" class="btn btn-outline-warning flex-grow-1" id="btnRetake" style="border-radius:10px;">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Ambil Ulang
+                                        </button>
+                                        <button type="button" class="btn btn-success flex-grow-1" id="btnUsePhoto" style="border-radius:10px;">
+                                            <i class="bi bi-check-lg me-1"></i>Gunakan Foto
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Photo Confirmed -->
+                                <div id="cameraConfirmed" style="display:none;">
+                                    <div class="camera-viewport">
+                                        <img id="confirmedPhoto" alt="Foto Selfie">
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <span class="gps-status-badge dalam"><i class="bi bi-check-circle-fill"></i> Foto berhasil diambil</span>
+                                    </div>
+                                    <div class="d-grid mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnRetakeConfirmed" style="border-radius:10px;">
+                                            <i class="bi bi-camera me-1"></i>Ambil Ulang
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Camera Error -->
+                                <div id="cameraError" style="display:none;" class="text-center py-3">
+                                    <div class="camera-prompt-icon denied"><i class="bi bi-camera-video-off"></i></div>
+                                    <p class="fw-semibold text-danger mb-1" id="cameraErrorMsg">Kamera tidak tersedia</p>
+                                    <small class="text-muted" id="cameraErrorDetail">Pastikan izin kamera diaktifkan</small>
+                                    <div class="d-grid gap-2 mt-3">
+                                        <button type="button" class="btn btn-outline-primary" id="btnRetryCamera" style="border-radius:12px;">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>Coba Lagi
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Signature Pad -->
@@ -947,6 +1080,13 @@
                 return false;
             }
 
+            // Validate foto selfie
+            if (!document.getElementById('fotoSelfieInput').value) {
+                e.preventDefault();
+                showToast('Foto selfie wajib diambil!', 'danger');
+                return false;
+            }
+
             @if($kegiatan->isGpsEnabled())
             // Validate GPS
             const latVal = document.getElementById('latitudeUser').value;
@@ -977,6 +1117,181 @@
         // ========================
         // GPS LOCATION LOGIC (Enhanced Permission Handling)
         // ========================
+
+        // Camera Selfie Logic (loaded before GPS so it's available)
+        (function() {
+            let stream = null;
+            let facingMode = 'user'; // front camera default
+            let capturedDataUrl = null;
+            const video = document.getElementById('cameraVideo');
+            const fotoInput = document.getElementById('fotoSelfieInput');
+
+            const camEls = {
+                prePrompt: document.getElementById('cameraPrePrompt'),
+                loading: document.getElementById('cameraLoading'),
+                live: document.getElementById('cameraLive'),
+                preview: document.getElementById('cameraPreview'),
+                confirmed: document.getElementById('cameraConfirmed'),
+                error: document.getElementById('cameraError'),
+                errorMsg: document.getElementById('cameraErrorMsg'),
+                errorDetail: document.getElementById('cameraErrorDetail'),
+                watermark: document.getElementById('cameraWatermark'),
+                countdown: document.getElementById('cameraCountdownOverlay')
+            };
+
+            function hideCamAll() {
+                ['prePrompt','loading','live','preview','confirmed','error'].forEach(k => {
+                    if (camEls[k]) camEls[k].style.display = 'none';
+                });
+            }
+            function showCamPanel(name) {
+                hideCamAll();
+                if (camEls[name]) camEls[name].style.display = 'block';
+            }
+
+            function stopStream() {
+                if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            }
+
+            function updateWatermark() {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
+                const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+                let text = '{{ $kegiatan->nama_kegiatan }}<br>' + dateStr + ' ' + timeStr;
+                @if($kegiatan->isGpsEnabled())
+                const lat = document.getElementById('latitudeUser').value;
+                const lng = document.getElementById('longitudeUser').value;
+                if (lat && lng) text += '<br>' + parseFloat(lat).toFixed(6) + ', ' + parseFloat(lng).toFixed(6);
+                @endif
+                camEls.watermark.innerHTML = text;
+            }
+
+            async function openCamera() {
+                showCamPanel('loading');
+                stopStream();
+                try {
+                    const constraints = {
+                        video: { facingMode: facingMode, width: {ideal: 720}, height: {ideal: 960} },
+                        audio: false
+                    };
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    video.classList.toggle('mirror', facingMode === 'user');
+                    showCamPanel('live');
+                    updateWatermark();
+                    // Keep watermark time updated
+                    window._camWmInterval = setInterval(updateWatermark, 10000);
+                } catch(err) {
+                    let msg = 'Kamera tidak tersedia', detail = 'Pastikan izin kamera diaktifkan di browser.';
+                    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        msg = 'Izin Kamera Ditolak'; detail = 'Aktifkan izin kamera di pengaturan browser.';
+                    } else if (err.name === 'NotFoundError') {
+                        msg = 'Kamera Tidak Ditemukan'; detail = 'Perangkat ini tidak memiliki kamera.';
+                    } else if (err.name === 'NotReadableError') {
+                        msg = 'Kamera Sedang Digunakan'; detail = 'Tutup aplikasi lain yang menggunakan kamera.';
+                    }
+                    camEls.errorMsg.textContent = msg;
+                    camEls.errorDetail.textContent = detail;
+                    showCamPanel('error');
+                }
+            }
+
+            function doCountdownAndCapture() {
+                let count = 3;
+                camEls.countdown.style.display = 'flex';
+                camEls.countdown.textContent = count;
+                document.getElementById('btnCapture').disabled = true;
+
+                const interval = setInterval(() => {
+                    count--;
+                    if (count > 0) {
+                        camEls.countdown.textContent = count;
+                    } else {
+                        clearInterval(interval);
+                        camEls.countdown.style.display = 'none';
+                        capturePhoto();
+                        document.getElementById('btnCapture').disabled = false;
+                    }
+                }, 800);
+            }
+
+            function capturePhoto() {
+                updateWatermark();
+                const vw = video.videoWidth, vh = video.videoHeight;
+                const c = document.createElement('canvas');
+                // Portrait crop 3:4
+                let sw = vw, sh = Math.round(vw * 4 / 3);
+                if (sh > vh) { sh = vh; sw = Math.round(vh * 3 / 4); }
+                const sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
+
+                c.width = Math.min(sw, 720);
+                c.height = Math.round(c.width * 4 / 3);
+                const ctx = c.getContext('2d');
+
+                // Mirror for front camera
+                if (facingMode === 'user') {
+                    ctx.translate(c.width, 0);
+                    ctx.scale(-1, 1);
+                }
+                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+
+                // Reset transform for watermark
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                // Draw watermark
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
+                const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                let wmLines = ['{{ $kegiatan->nama_kegiatan }}', dateStr + ' ' + timeStr];
+                @if($kegiatan->isGpsEnabled())
+                const lat = document.getElementById('latitudeUser').value;
+                const lng = document.getElementById('longitudeUser').value;
+                if (lat && lng) wmLines.push(parseFloat(lat).toFixed(6) + ', ' + parseFloat(lng).toFixed(6));
+                @endif
+
+                const fontSize = Math.round(c.width * 0.028);
+                ctx.font = '600 ' + fontSize + 'px Inter, sans-serif';
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                ctx.fillRect(0, c.height - (wmLines.length * (fontSize + 6)) - 16, c.width, (wmLines.length * (fontSize + 6)) + 16);
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4;
+                wmLines.forEach((line, i) => {
+                    ctx.fillText(line, 12, c.height - ((wmLines.length - i - 1) * (fontSize + 6)) - 12);
+                });
+                ctx.shadowBlur = 0;
+
+                // Compress to JPEG
+                capturedDataUrl = c.toDataURL('image/jpeg', 0.75);
+                document.getElementById('capturedPhoto').src = capturedDataUrl;
+                showCamPanel('preview');
+                stopStream();
+                if (window._camWmInterval) clearInterval(window._camWmInterval);
+            }
+
+            function confirmPhoto() {
+                fotoInput.value = capturedDataUrl;
+                document.getElementById('confirmedPhoto').src = capturedDataUrl;
+                showCamPanel('confirmed');
+            }
+
+            function retakePhoto() {
+                capturedDataUrl = null;
+                fotoInput.value = '';
+                openCamera();
+            }
+
+            // Event listeners
+            document.getElementById('btnStartCamera').addEventListener('click', openCamera);
+            document.getElementById('btnCapture').addEventListener('click', doCountdownAndCapture);
+            document.getElementById('btnSwitchCamera').addEventListener('click', function() {
+                facingMode = facingMode === 'user' ? 'environment' : 'user';
+                openCamera();
+            });
+            document.getElementById('btnRetake').addEventListener('click', retakePhoto);
+            document.getElementById('btnUsePhoto').addEventListener('click', confirmPhoto);
+            document.getElementById('btnRetakeConfirmed').addEventListener('click', retakePhoto);
+            document.getElementById('btnRetryCamera').addEventListener('click', openCamera);
+        })();
         (function() {
             const kegiatanLat = {{ $kegiatan->latitude }};
             const kegiatanLng = {{ $kegiatan->longitude }};
@@ -1190,6 +1505,136 @@
                     });
                 });
             });
+        })();
+        @endif
+
+        // ========================
+        // CAMERA SELFIE LOGIC
+        // ========================
+        @if(!$kegiatan->isGpsEnabled())
+        (function() {
+            let stream = null;
+            let facingMode = 'user';
+            let capturedDataUrl = null;
+            const video = document.getElementById('cameraVideo');
+            const fotoInput = document.getElementById('fotoSelfieInput');
+
+            const camEls = {
+                prePrompt: document.getElementById('cameraPrePrompt'),
+                loading: document.getElementById('cameraLoading'),
+                live: document.getElementById('cameraLive'),
+                preview: document.getElementById('cameraPreview'),
+                confirmed: document.getElementById('cameraConfirmed'),
+                error: document.getElementById('cameraError'),
+                errorMsg: document.getElementById('cameraErrorMsg'),
+                errorDetail: document.getElementById('cameraErrorDetail'),
+                watermark: document.getElementById('cameraWatermark'),
+                countdown: document.getElementById('cameraCountdownOverlay')
+            };
+
+            function hideCamAll() {
+                ['prePrompt','loading','live','preview','confirmed','error'].forEach(k => {
+                    if (camEls[k]) camEls[k].style.display = 'none';
+                });
+            }
+            function showCamPanel(name) {
+                hideCamAll();
+                if (camEls[name]) camEls[name].style.display = 'block';
+            }
+            function stopStream() {
+                if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            }
+
+            function updateWatermark() {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'});
+                const timeStr = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+                camEls.watermark.innerHTML = '{{ $kegiatan->nama_kegiatan }}<br>' + dateStr + ' ' + timeStr;
+            }
+
+            async function openCamera() {
+                showCamPanel('loading');
+                stopStream();
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: facingMode, width: {ideal: 720}, height: {ideal: 960} }, audio: false
+                    });
+                    video.srcObject = stream;
+                    video.classList.toggle('mirror', facingMode === 'user');
+                    showCamPanel('live');
+                    updateWatermark();
+                    window._camWmInterval = setInterval(updateWatermark, 10000);
+                } catch(err) {
+                    let msg = 'Kamera tidak tersedia', detail = 'Pastikan izin kamera diaktifkan.';
+                    if (err.name === 'NotAllowedError') { msg = 'Izin Kamera Ditolak'; detail = 'Aktifkan izin kamera di pengaturan browser.'; }
+                    else if (err.name === 'NotFoundError') { msg = 'Kamera Tidak Ditemukan'; detail = 'Perangkat ini tidak memiliki kamera.'; }
+                    camEls.errorMsg.textContent = msg;
+                    camEls.errorDetail.textContent = detail;
+                    showCamPanel('error');
+                }
+            }
+
+            function doCountdownAndCapture() {
+                let count = 3;
+                camEls.countdown.style.display = 'flex';
+                camEls.countdown.textContent = count;
+                document.getElementById('btnCapture').disabled = true;
+                const interval = setInterval(() => {
+                    count--;
+                    if (count > 0) { camEls.countdown.textContent = count; }
+                    else {
+                        clearInterval(interval);
+                        camEls.countdown.style.display = 'none';
+                        capturePhoto();
+                        document.getElementById('btnCapture').disabled = false;
+                    }
+                }, 800);
+            }
+
+            function capturePhoto() {
+                const vw = video.videoWidth, vh = video.videoHeight;
+                const c = document.createElement('canvas');
+                let sw = vw, sh = Math.round(vw * 4 / 3);
+                if (sh > vh) { sh = vh; sw = Math.round(vh * 3 / 4); }
+                const sx = Math.round((vw - sw) / 2), sy = Math.round((vh - sh) / 2);
+                c.width = Math.min(sw, 720);
+                c.height = Math.round(c.width * 4 / 3);
+                const ctx = c.getContext('2d');
+                if (facingMode === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+                ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                const now = new Date();
+                const wmLines = ['{{ $kegiatan->nama_kegiatan }}',
+                    now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) + ' ' +
+                    now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'})];
+                const fontSize = Math.round(c.width * 0.028);
+                ctx.font = '600 ' + fontSize + 'px Inter, sans-serif';
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                ctx.fillRect(0, c.height - (wmLines.length*(fontSize+6))-16, c.width, (wmLines.length*(fontSize+6))+16);
+                ctx.fillStyle = '#fff'; ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 4;
+                wmLines.forEach((line,i) => { ctx.fillText(line, 12, c.height - ((wmLines.length-i-1)*(fontSize+6))-12); });
+
+                capturedDataUrl = c.toDataURL('image/jpeg', 0.75);
+                document.getElementById('capturedPhoto').src = capturedDataUrl;
+                showCamPanel('preview');
+                stopStream();
+                if (window._camWmInterval) clearInterval(window._camWmInterval);
+            }
+
+            document.getElementById('btnStartCamera').addEventListener('click', openCamera);
+            document.getElementById('btnCapture').addEventListener('click', doCountdownAndCapture);
+            document.getElementById('btnSwitchCamera').addEventListener('click', function() {
+                facingMode = facingMode === 'user' ? 'environment' : 'user'; openCamera();
+            });
+            document.getElementById('btnRetake').addEventListener('click', function() { capturedDataUrl=null; fotoInput.value=''; openCamera(); });
+            document.getElementById('btnUsePhoto').addEventListener('click', function() {
+                fotoInput.value = capturedDataUrl;
+                document.getElementById('confirmedPhoto').src = capturedDataUrl;
+                showCamPanel('confirmed');
+            });
+            document.getElementById('btnRetakeConfirmed').addEventListener('click', function() { capturedDataUrl=null; fotoInput.value=''; openCamera(); });
+            document.getElementById('btnRetryCamera').addEventListener('click', openCamera);
         })();
         @endif
     </script>

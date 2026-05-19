@@ -71,6 +71,7 @@ class AbsensiController extends Controller
             'jabatan' => 'required|string|max:255',
             'satker' => 'required|string|max:255',
             'ttd' => 'required|string', // Base64 signature
+            'foto_selfie' => 'required|string', // Base64 photo from camera
         ];
 
         // Tambahkan validasi GPS jika kegiatan menggunakan GPS
@@ -92,6 +93,33 @@ class AbsensiController extends Controller
                 ->withInput();
         }
 
+        // Save foto selfie from base64
+        $fotoPath = null;
+        if (!empty($validated['foto_selfie'])) {
+            $fotoData = $validated['foto_selfie'];
+            // Remove data URI prefix
+            if (preg_match('/^data:image\/(\w+);base64,/', $fotoData, $type)) {
+                $fotoData = substr($fotoData, strpos($fotoData, ',') + 1);
+                $ext = strtolower($type[1]);
+                if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+                    $ext = 'jpg';
+                }
+            } else {
+                $ext = 'jpg';
+            }
+            $fotoData = base64_decode($fotoData);
+            if ($fotoData !== false) {
+                $filename = 'absensi-' . $validated['nip'] . '-' . now()->format('YmdHis') . '.' . $ext;
+                $dir = 'foto-absensi/' . $kegiatan->id;
+                
+                // Ensure directory exists
+                \Storage::disk('public')->makeDirectory($dir);
+                \Storage::disk('public')->put($dir . '/' . $filename, $fotoData);
+                
+                $fotoPath = $dir . '/' . $filename;
+            }
+        }
+
         // Prepare attendance data
         $absensiData = [
             'kegiatan_id' => $kegiatan->id,
@@ -100,6 +128,7 @@ class AbsensiController extends Controller
             'jabatan' => $validated['jabatan'],
             'satker' => $validated['satker'],
             'ttd' => $validated['ttd'],
+            'foto_selfie' => $fotoPath,
             'waktu_absensi' => now(),
         ];
 
