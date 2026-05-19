@@ -576,7 +576,9 @@
                     
                     <!-- Hidden fields -->
                     <input type="hidden" name="ttd" id="ttdSignature" value="">
+                    @if($kegiatan->isSelfieRequired())
                     <input type="hidden" name="foto_selfie" id="fotoSelfieInput" value="">
+                    @endif
                     @if($kegiatan->isGpsEnabled())
                     <input type="hidden" name="latitude_user" id="latitudeUser" value="">
                     <input type="hidden" name="longitude_user" id="longitudeUser" value="">
@@ -741,6 +743,7 @@
                                value="{{ old('satkerCustom') }}">
                     </div>
 
+                    @if($kegiatan->isSelfieRequired())
                     <!-- Camera Selfie Section -->
                     <div class="mb-4">
                         <label class="form-label fw-semibold">
@@ -849,6 +852,7 @@
                             </div>
                         </div>
                     </div>
+                    @endif
 
                     <!-- Signature Pad -->
                     <div class="signature-section">
@@ -1113,12 +1117,14 @@
                 return false;
             }
 
+            @if($kegiatan->isSelfieRequired())
             // Validate foto selfie
             if (!document.getElementById('fotoSelfieInput').value) {
                 e.preventDefault();
                 showToast('Foto selfie wajib diambil!', 'danger');
                 return false;
             }
+            @endif
 
             @if($kegiatan->isGpsEnabled())
             // Validate GPS
@@ -1152,6 +1158,7 @@
         // ========================
 
         // Camera Selfie Logic with Location Info
+        @if($kegiatan->isSelfieRequired())
         (function() {
             let stream = null;
             let facingMode = 'user';
@@ -1401,6 +1408,7 @@
             document.getElementById('btnRetakeConfirmed').addEventListener('click', retakePhoto);
             document.getElementById('btnRetryCamera').addEventListener('click', openCamera);
         })();
+        @endif
         (function() {
             const kegiatanLat = {{ $kegiatan->latitude }};
             const kegiatanLng = {{ $kegiatan->longitude }};

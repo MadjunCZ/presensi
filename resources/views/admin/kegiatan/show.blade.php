@@ -116,6 +116,28 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center text-muted">
+                            <i class="bi bi-camera me-2"></i>
+                            <div>
+                                <small>Selfie Absensi</small>
+                                <div>
+                                    @if($kegiatan->isSelfieRequired())
+                                        <span class="gps-badge active">
+                                            <i class="bi bi-camera-fill"></i> Wajib Selfie
+                                        </span>
+                                    @else
+                                        <span class="gps-badge inactive">
+                                            <i class="bi bi-camera-video-off"></i> Tanpa Selfie
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 @if($kegiatan->deskripsi)
                     <hr>

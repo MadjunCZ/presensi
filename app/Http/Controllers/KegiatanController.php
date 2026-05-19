@@ -63,6 +63,9 @@ class KegiatanController extends Controller
             'radius_meter' => 'nullable|integer|min:10|max:5000',
         ]);
 
+        // Handle checkbox toggle
+        $validated['is_selfie_required'] = $request->has('is_selfie_required') ? 1 : 0;
+
         // Generate unique token
         $validated['token'] = Str::uuid()->toString();
 
@@ -110,6 +113,9 @@ class KegiatanController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'radius_meter' => 'nullable|integer|min:10|max:5000',
         ]);
+
+        // Handle checkbox toggle
+        $validated['is_selfie_required'] = $request->has('is_selfie_required') ? 1 : 0;
 
         // Set default radius if lat/lng provided but radius not set
         if (!empty($validated['latitude']) && !empty($validated['longitude']) && empty($validated['radius_meter'])) {

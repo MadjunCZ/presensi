@@ -185,6 +185,22 @@
                         </small>
                     </div>
 
+                    <!-- Selfie Toggle -->
+                    <div class="gps-toggle-card {{ $kegiatan->isSelfieRequired() ? 'active' : '' }}" id="selfieToggleCard" style="margin-top: -0.5rem;">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="enableSelfie"
+                                   name="is_selfie_required" value="1"
+                                   {{ $kegiatan->isSelfieRequired() || old('is_selfie_required') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-semibold" for="enableSelfie">
+                                <i class="bi bi-camera-fill text-primary me-1"></i>
+                                Wajib Selfie Saat Absensi
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Peserta wajib mengambil foto selfie dari kamera sebagai bukti kehadiran
+                        </small>
+                    </div>
+
                     <div id="gpsSection" style="display: none;">
                         <div class="map-info">
                             <i class="bi bi-info-circle me-1"></i>

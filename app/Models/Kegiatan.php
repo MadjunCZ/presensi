@@ -21,6 +21,7 @@ class Kegiatan extends Model
         'latitude',
         'longitude',
         'radius_meter',
+        'is_selfie_required',
         'token',
     ];
 
@@ -29,6 +30,7 @@ class Kegiatan extends Model
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
         'radius_meter' => 'integer',
+        'is_selfie_required' => 'boolean',
     ];
 
     /**
@@ -37,6 +39,14 @@ class Kegiatan extends Model
     public function isGpsEnabled(): bool
     {
         return !is_null($this->latitude) && !is_null($this->longitude);
+    }
+
+    /**
+     * Cek apakah kegiatan ini memerlukan foto selfie.
+     */
+    public function isSelfieRequired(): bool
+    {
+        return (bool) $this->is_selfie_required;
     }
 
     // Generate token unik saat membuat kegiatan

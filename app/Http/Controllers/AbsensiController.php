@@ -71,8 +71,14 @@ class AbsensiController extends Controller
             'jabatan' => 'required|string|max:255',
             'satker' => 'required|string|max:255',
             'ttd' => 'required|string', // Base64 signature
-            'foto_selfie' => 'required|string', // Base64 photo from camera
         ];
+
+        // Tambahkan validasi selfie jika kegiatan mewajibkan
+        if ($kegiatan->isSelfieRequired()) {
+            $rules['foto_selfie'] = 'required|string';
+        } else {
+            $rules['foto_selfie'] = 'nullable|string';
+        }
 
         // Tambahkan validasi GPS jika kegiatan menggunakan GPS
         if ($kegiatan->isGpsEnabled()) {
