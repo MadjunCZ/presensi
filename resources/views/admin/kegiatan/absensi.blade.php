@@ -165,7 +165,7 @@
                                 <div class="modal-body text-center">
                                     @if($absen->foto_selfie)
                                     <p class="text-muted small mb-2"><i class="bi bi-camera-fill me-1"></i>Foto Selfie</p>
-                                    <img src="{{ asset('storage/' . $absen->foto_selfie) }}" alt="Foto Selfie" 
+                                    <img src="{{ asset($absen->foto_selfie) }}" alt="Foto Selfie" 
                                          style="max-width: 100%; max-height: 300px; border: 1px solid #ddd; border-radius: 8px; object-fit: cover;" class="mb-3">
                                     <hr>
                                     @endif

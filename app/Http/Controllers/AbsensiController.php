@@ -93,7 +93,7 @@ class AbsensiController extends Controller
                 ->withInput();
         }
 
-        // Save foto selfie from base64
+        // Save foto selfie from base64 (langsung ke public/, tanpa storage:link)
         $fotoPath = null;
         if (!empty($validated['foto_selfie'])) {
             $fotoData = $validated['foto_selfie'];
@@ -110,13 +110,15 @@ class AbsensiController extends Controller
             $fotoData = base64_decode($fotoData);
             if ($fotoData !== false) {
                 $filename = 'absensi-' . $validated['nip'] . '-' . now()->format('YmdHis') . '.' . $ext;
-                $dir = 'foto-absensi/' . $kegiatan->id;
+                $dir = public_path('foto-absensi/' . $kegiatan->id);
                 
-                // Ensure directory exists
-                \Storage::disk('public')->makeDirectory($dir);
-                \Storage::disk('public')->put($dir . '/' . $filename, $fotoData);
+                // Buat direktori jika belum ada
+                if (!file_exists($dir)) {
+                    mkdir($dir, 0755, true);
+                }
                 
-                $fotoPath = $dir . '/' . $filename;
+                file_put_contents($dir . '/' . $filename, $fotoData);
+                $fotoPath = 'foto-absensi/' . $kegiatan->id . '/' . $filename;
             }
         }
 
