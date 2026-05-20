@@ -244,9 +244,6 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="{{ route('admin.kegiatan.absensi', $kegiatan) }}" class="btn btn-outline-success">
-                        <i class="bi bi-people me-2"></i>Manajemen Absensi
-                    </a>
                     <a href="{{ route('admin.kegiatan.export-excel', $kegiatan) }}" class="btn btn-outline-success">
                         <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
                     </a>

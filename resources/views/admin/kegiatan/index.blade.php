@@ -104,7 +104,7 @@
                             <button class="btn btn-sm btn-outline-success" 
                                     onclick="showQrCode('{{ $kegiatan->token }}')"
                                     title="QR Code">
-                                <i class="bi bi-qr-code"></i>
+                                <i class="bi bi-qr-code"></i>QR Code
                             </button>
                         </td>
                         <td class="text-center">
@@ -275,7 +275,7 @@
             text: currentQrUrl,
             width: 200,
             height: 200,
-            colorDark: '#0d6efd',
+            colorDark: '#198754',
             correctLevel: QRCode.CorrectLevel.H
         });
         

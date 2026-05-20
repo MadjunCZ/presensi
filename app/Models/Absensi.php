@@ -43,4 +43,20 @@ class Absensi extends Model
     {
         return $this->waktu_absensi->format('d/m/Y H:i:s');
     }
+
+    // Accessor untuk foto selfie dengan URL lengkap
+    public function getFotoSelfieUrlAttribute(): string
+    {
+        if (!$this->foto_selfie) {
+            return '';
+        }
+        
+        // Jika sudah URL lengkap, return langsung
+        if (str_starts_with($this->foto_selfie, 'http://') || str_starts_with($this->foto_selfie, 'https://')) {
+            return $this->foto_selfie;
+        }
+        
+        // Jika path relatif, gunakan asset()
+        return asset($this->foto_selfie);
+    }
 }
